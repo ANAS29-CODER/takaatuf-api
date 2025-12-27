@@ -1,0 +1,131 @@
+<?php
+
+namespace App\Http\Controllers\API\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\OAuthLoginRequest;
+use App\Http\Resources\UserResource;
+use App\Services\AuthService;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Laravel\Socialite\Facades\Socialite;
+
+class AuthController extends Controller
+{
+    //
+
+ public function __construct(
+        protected AuthService $authService
+    ) {}
+
+    public function redirect(Request $request, string $provider)
+{
+    if (!in_array($provider, ['google', 'facebook'])) {
+        return response()->json(['message' => 'Invalid provider'], 400);
+    }
+
+    $returnUrl = $request->query('returnUrl', '/');
+    if (!str_starts_with($returnUrl, '/')) {
+        $returnUrl = '/';
+    }
+    session(['oauth_return_url' => $returnUrl]);
+
+    $driver = Socialite::driver($provider);
+
+    if ($provider === 'google') {
+        $driver->scopes(['email', 'profile']);
+    } else {
+        $driver->scopes(['email']); // أو ['public_profile','email']
+    }
+
+    return $driver->redirect();
+}
+
+
+public function callback(Request $request, string $provider)
+{
+    // 1) Provider validation
+    $provider = strtolower($provider);
+    if (!in_array($provider, ['google', 'facebook'])) {
+        return response()->json(['message' => 'Invalid provider'], 400);
+    }
+
+    // 2) User cancelled
+    if ($request->get('error') === 'access_denied') {
+        return response()->json([
+            'message' => 'تم إلغاء تسجيل الدخول. جرّب مرة ثانية وقت ما تحب.',
+        ], 200);
+    }
+
+    try {
+        // 3) Use session-based flow (NO stateless) لأنك بتستخدمي session للـreturnUrl
+        $driver = Socialite::driver($provider);
+
+        // Facebook يحتاج fields عشان يرجّع email/name صح
+        if ($provider === 'facebook') {
+            $driver->fields(['id', 'name', 'email']);
+        }
+
+        $socialUser = $driver->user();
+
+        // 4) Handle missing email from Facebook (شائع)
+        if ($provider === 'facebook' && !$socialUser->getEmail()) {
+            return response()->json([
+                'message' => 'Facebook did not provide an email for this account. Please use Google login or another Facebook account.',
+            ], 422);
+        }
+
+        // 5) Login/Create user + token
+        $result = $this->authService->oauthLogin($provider, $socialUser);
+
+        // 6) Intended destination
+        $returnUrl = session('oauth_return_url', '/');
+
+        return response()->json([
+            'user' => new UserResource($result['user']),
+            'token' => $result['token'],
+            'profile_completed' => $result['profile_completed'],
+            'returnUrl' => $returnUrl,
+            'message' => $result['profile_completed']
+                ? 'Login successful'
+                : 'Please complete your profile before proceeding',
+        ]);
+
+    } catch (\Throwable $e) {
+        report($e);
+
+        // مؤقتاً للتشخيص (خلال التطوير)
+        return response()->json([
+            'message' => 'OAuth login failed. Please try again.',
+            'error' => $e->getMessage(),
+        ], 400);
+    }
+}
+
+
+
+    // Login عادي
+    public function login(LoginRequest $request) {
+        try {
+            $data = $this->authService->loginWithEmail(
+                $request->email,
+                $request->password
+            );
+
+            return response()->json([
+                'user' => new UserResource($data['user']),
+                'token' => $data['token'],
+                'status' => $data['status'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 401);
+        }
+    }
+
+    // Logout
+    public function logout(Request $request) {
+        $this->authService->logout($request->user());
+        return response()->json(['message' => 'Logged out successfully']);
+    }
+}
