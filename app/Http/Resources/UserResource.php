@@ -19,6 +19,11 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'profile_completed' => (bool) $this->profile_completed,
+            'role' => $this->role,
+            'city_neighborhood' => $this->city_neighborhood,
+            'wallet_type' => $this->wallet_type,
+            'wallet_address' => $this->wallet_address,
+            'paypal_account' => $this->paypal_account,
         ];
     }
 }

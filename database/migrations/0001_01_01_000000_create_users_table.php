@@ -14,14 +14,11 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+           $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->boolean('profile_completed')->default(false);
-            // $table->string('role')->default('user');     // kr / kp / admin
-            // $table->string('city')->nullable();          // المدينة / الحي اللي يدخلها المستخدم
-            // $table->boolean('location_verified')->default(false); // هل أكد المستخدم موقعه
             $table->timestamps();
         });
 

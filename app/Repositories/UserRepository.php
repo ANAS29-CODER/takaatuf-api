@@ -15,16 +15,17 @@ class UserRepository
     {
         return User::create($data);
     }
-    // public function updateProvider(User $user, string $provider, string $providerId): User
-    // {
-    //     if (!$user->oauth_provider) {
-    //         $user->oauth_provider = $provider;
-    //         $user->oauth_provider_id = $providerId;
-    //         $user->save();
-    //     }
+     public function update(int $userId, array $data): User
+    {
+        $user = User::find($userId);
+        $user->update($data);
+        return $user;
+    }
 
-    //     return $user;
-    // }
+    public function getById(int $userId): User
+    {
+        return User::findOrFail($userId);
+    }
 }
 
 ?>

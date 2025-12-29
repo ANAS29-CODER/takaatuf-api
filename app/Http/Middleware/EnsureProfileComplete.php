@@ -13,18 +13,16 @@ class EnsureProfileComplete
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-   public function handle($request, Closure $next)
-{
-    $user = $request->user();
+     public function handle(Request $request, Closure $next)
+    {
+        // تأكد من أن المستخدم قام بتسجيل الدخول
+        $user = $request->user();
 
-    if ($user && !$user->profile_completed) {
-        return response()->json([
-            'message' => 'Profile incomplete',
-            'code' => 'PROFILE_INCOMPLETE'
-        ], 403);
+        // تحقق من أن البروفايل مكتمل
+        if (!$user || !$user->profile_completed) {
+            return response()->json(['message' => 'Profile incomplete. Please complete your profile first.'], 403);
+        }
+
+        return $next($request);
     }
-
-    return $next($request);
-}
-
 }

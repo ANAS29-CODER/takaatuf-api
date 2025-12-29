@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->json('raw')->nullable();
             $table->timestamps();
-
             $table->unique(['provider', 'provider_user_id']);
         });
     }
