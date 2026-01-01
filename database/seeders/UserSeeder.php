@@ -14,12 +14,16 @@ class UserSeeder extends Seeder
      */
           public function run(): void
     {
-        User::create([
+            User::create([
             'name' => 'Nevin Test',
             'email' => 'nevinshabat@test.com',
             'password' => Hash::make('12345678'),
-            'profile_completed' => true,
+            'profile_completed' => false,
+            'role' => 'kr',
+            'city_neighborhood' => 'Gaza',
+            'wallet_type' => 'Ethereum',
+            'wallet_address' => '0x1234567890abcdef1234567890abcdef12345678',
+            'paypal_account' => 'nevinshabat@paypal.com',
         ]);
     }
-
 }

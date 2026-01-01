@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
-// OAuth Routes (لازم sessions)
+// OAuth Routes (session)
 Route::middleware([
     EncryptCookies::class,
     AddQueuedCookiesToResponse::class,
@@ -24,10 +24,9 @@ Route::middleware([
 // Login (email/pass)
 Route::post('/login', [AuthController::class, 'login']);
 
-// Logout (محمي)
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
-// ✅ Profile routes (محمي بس بالتوكن فقط)
+// ✅ Profile routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'showProfile']);
     Route::post('/profile', [ProfileController::class, 'updateProfile']);
@@ -37,14 +36,9 @@ Route::middleware(['auth:sanctum', 'profile.complete'])->get('/protected-test', 
     return response()->json(['ok' => true, 'message' => 'You are allowed']);
 });
 
-// // ✅ باقي المنصة (اللي بتحتاج بروفايل مكتمل) هون بتحطي profile.complete
+//
 // Route::middleware(['auth:sanctum', 'profile.complete'])->group(function () {
 //     // مثال:
 //     // Route::get('/dashboard', ...);
 //     // Route::post('/requests', ...);
 // });
-
-
-
-
-?>

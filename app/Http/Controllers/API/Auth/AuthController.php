@@ -54,7 +54,7 @@ class AuthController extends Controller
         // 2) User cancelled
         if ($request->get('error') === 'access_denied') {
             return response()->json([
-              'message' => 'Login cancelled. Please try again.'
+                'message' => 'Login cancelled. Please try again.'
             ], 200);
         }
 

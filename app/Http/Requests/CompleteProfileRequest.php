@@ -19,12 +19,20 @@ class CompleteProfileRequest extends FormRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
-    public function rules(): array
+      public function rules()
     {
-        return [
-            'name' => ['required','string','max:255'],
-            'age' => ['required','integer','min:16','max:90'],
-            'location' => ['required','string','max:255'],
+        $rules = [
+            'name' => 'required|string',
+            'city_neighborhood' => 'required|string',
         ];
+        
+        if ($this->role == 'Knowledge Provider') {
+            $rules['wallet_type'] = 'required|string';
+            $rules['wallet_address'] = 'required|string';
+        } else {
+            $rules['paypal_account'] = 'required|string';
+        }
+
+        return $rules;
     }
 }

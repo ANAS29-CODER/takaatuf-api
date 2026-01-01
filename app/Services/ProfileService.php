@@ -20,7 +20,6 @@ class ProfileService
 
     public function assignRoleBasedOnLocation($city)
     {
-        // هنا يمكنك إضافة منطق تحديد إذا كان المستخدم في غزة أو لا بناءً على المدينة
         return $city == "Gaza" ? 'Knowledge Provider' : 'Knowledge Requester';
     }
 }
