@@ -34,6 +34,7 @@ class ProfileController extends Controller
             $response['paypal_account'] = $user->paypal_account;
         } elseif ($user->role === 'Knowledge Provider') {
             $response['wallet_address'] = $user->wallet_address;
+            $response['wallet_type'] = $user->wallet_type;
         }
 
         return response()->json($response);
@@ -45,10 +46,10 @@ class ProfileController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
+
     public function updateProfile(Request $request)
     {
         try {
-
             $data = $request->validate([
                 'name' => 'required|string',
                 'city_neighborhood' => 'required|string',
@@ -60,7 +61,6 @@ class ProfileController extends Controller
             $role = $this->profileService->assignRoleBasedOnLocation($data['city_neighborhood']);
             $data['role'] = $role;
 
-            // التحقق من صحة البيانات بناءً على الدور
             if ($role == 'Knowledge Provider' && (empty($data['wallet_type']) || empty($data['wallet_address']))) {
                 return response()->json(['message' => 'Please complete the required wallet fields.'], 400);
             }
@@ -69,18 +69,7 @@ class ProfileController extends Controller
                 return response()->json(['message' => 'Please provide your PayPal account.'], 400);
             }
 
-
-            if ($role == 'Knowledge Provider') {
-
-                if ($data['wallet_type'] == 'Ethereum' && !preg_match('/^0x[a-fA-F0-9]{40}$/', $data['wallet_address'])) {
-                    return response()->json(['message' => 'Invalid Ethereum wallet address format.'], 400);
-                } elseif ($data['wallet_type'] == 'Bitcoin' && !preg_match('/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/', $data['wallet_address'])) {
-                    return response()->json(['message' => 'Invalid Bitcoin wallet address format.'], 400);
-                }
-            }
-
             $user = $this->profileService->updateProfile(auth()->id(), $data);
-
             $user->profile_completed = true;
             $user->save();
 
@@ -102,8 +91,29 @@ class ProfileController extends Controller
 
             return response()->json($response);
         } catch (\Exception $e) {
-
-            return response()->json(['error' => 'An error occurred while saving your profile. Please try again later.'], 500);
+            return response()->json([
+                'error' => 'An error occurred while saving your profile.',
+                'details' => $e->getMessage()
+            ], 500);
         }
+    }
+
+
+
+    public function handleRoleAssignment(Request $request)
+    {
+        $user = auth()->user();
+        $ip = $request->ip();
+
+        $location = app(ProfileService::class)->getGeolocation($ip);
+
+        $role = app(ProfileService::class)->assignRoleBasedOnLocation($ip);
+
+        app(ProfileService::class)->storeAuditLog($user->id, $role == 'Knowledge Provider' ? 'Match' : 'Mismatch', $location, null);
+
+        $user->role = $role;
+        $user->save();
+
+        return response()->json(['message' => 'Role assigned based on location']);
     }
 }

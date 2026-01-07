@@ -1,12 +1,15 @@
 <?php
 
+use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+
 
 // OAuth Routes (session)
 Route::middleware([
@@ -21,24 +24,47 @@ Route::middleware([
         ->where('provider', 'google|facebook|Google|Facebook');
 });
 
-// Login (email/pass)
+// Public Auth Routes
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
-// ✅ Profile routes
+// Email Verification
+
+// Verification link (auth)
+Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+    $request->fulfill(); // يفعل الإيميل
+    return response()->json([
+        'message' => 'Email verified successfully'
+    ]);
+})->middleware(['auth:sanctum','signed'])
+->name('verification.verify');
+
+// Resend verification email (needs auth)
+Route::post('/email/resend', function (Request $request) {
+    $request->user()->sendEmailVerificationNotification();
+    return response()->json(['message' => 'Verification email resent']);
+})->middleware(['auth:sanctum']);
+
+
+// Authenticated Routes
+
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Logout
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Profile
     Route::get('/profile', [ProfileController::class, 'showProfile']);
     Route::post('/profile', [ProfileController::class, 'updateProfile']);
+
+    // Admin
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+
+    // Protected test (requires profile completion) // test
+    Route::middleware('profile.complete')->get('/protected-test', function () {
+        return response()->json(['ok' => true, 'message' => 'You are allowed']);
+    });
+
 });
 
-Route::middleware(['auth:sanctum', 'profile.complete'])->get('/protected-test', function () {
-    return response()->json(['ok' => true, 'message' => 'You are allowed']);
-});
-
-//
-// Route::middleware(['auth:sanctum', 'profile.complete'])->group(function () {
-//     // مثال:
-//     // Route::get('/dashboard', ...);
-//     // Route::post('/requests', ...);
-// });

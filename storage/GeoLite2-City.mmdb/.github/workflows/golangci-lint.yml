@@ -1,0 +1,25 @@
+name: golangci-lint
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '6 15 * * SUN'
+
+permissions: {}
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest
