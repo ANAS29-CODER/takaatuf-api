@@ -13,16 +13,15 @@ class EnsureProfileComplete
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-     public function handle(Request $request, Closure $next)
-    {
-        // تأكد من أن المستخدم قام بتسجيل الدخول
-        $user = $request->user();
 
-        // تحقق من أن البروفايل مكتمل
-        if (!$user || !$user->profile_completed) {
-            return response()->json(['message' => 'Profile incomplete. Please complete your profile first.'], 403);
+    public function handle(Request $request, Closure $next)
+    {
+        // إذا كانت profile_completed false، قم بإعادة التوجيه إلى صفحة البروفايل
+        if (auth()->user()->profile_completed === false) {
+            return redirect('profile')->with('message', 'Please complete your profile before proceeding.');
         }
 
         return $next($request);
-    }
+
+}
 }

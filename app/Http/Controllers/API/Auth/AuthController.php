@@ -5,11 +5,19 @@ namespace App\Http\Controllers\API\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\OAuthLoginRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\VerifyEmail;
+use App\Models\User;
 use App\Services\AuthService;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
@@ -98,6 +106,35 @@ class AuthController extends Controller
             ], 400);
         }
     }
+
+    /**
+     * تسجيل مستخدم جديد
+     *
+     * @param \App\Http\Requests\RegisterRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function register(RegisterRequest $request)
+    {
+        $user = User::create([
+            'full_name' => $request->full_name,
+            'email'    => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Send verification email
+        $user->sendEmailVerificationNotification();
+
+        // Create token
+        $token = $user->createToken('Takaatuf App')->plainTextToken;
+
+        return response()->json([
+            'user'    => $user,
+            'token'   => $token,
+            'message' => 'Registration successful, please verify your email.',
+        ], 201);
+    }
+
     // Login عادي
     public function login(LoginRequest $request)
     {
