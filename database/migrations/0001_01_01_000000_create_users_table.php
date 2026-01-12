@@ -20,14 +20,15 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->boolean('profile_completed')->default(false);
-            $table->string('role')->default('kr');
+            $table->enum('role', ['kr', 'kp'])->default('kr'); // Role (Knowledge Provider or Knowledge Requester)
             $table->string('city_neighborhood')->nullable();
-            $table->string('wallet_type')->nullable(); // نوع المحفظة: ethereum|solana|bitcoin
+            $table->enum('wallet_type', ['ethereum', 'solana', 'bitcoin'])->nullable();
             $table->string('wallet_address')->nullable();
             $table->string('paypal_account')->nullable();
 
             $table->timestamps(); // timestamps: created_at و updated_at
         });
+
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

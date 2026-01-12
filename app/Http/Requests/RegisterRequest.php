@@ -29,13 +29,29 @@ class RegisterRequest extends FormRequest
         ];
     }
 
-    public function messages()
-    {
-        return [
-            'name.required' => 'Full Name is required.',
-            'email.required' => 'Email is required.',
-            'password.required' => 'Password is required.',
-            'password_confirmation.required' => 'Password confirmation is required.',
-        ];
-    }
+  public function messages()
+{
+    return [
+
+        // Full Name
+        'full_name.required' => 'Full name is required.',
+        'full_name.string'   => 'Full name must be a valid text.',
+        'full_name.min'      => 'Full name must be at least 2 characters long.',
+        'full_name.max'      => 'Full name must not exceed 100 characters.',
+
+        // Email
+        'email.required' => 'Email is required.',
+        'email.email'    => 'Please enter a valid email address.',
+        'email.unique'   => 'This email is already registered. Please sign in ".',
+
+        // Password
+        'password.required' => 'Password is required.',
+        'password.min'      => 'Password must be at least 8 characters long.',
+        'password.regex'    => 'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character.',
+
+        // Password Confirmation
+        'password_confirmation.required' => 'Password confirmation is required.',
+        'password_confirmation.same'     => 'Password confirmation does not match the password.',
+    ];
+}
 }

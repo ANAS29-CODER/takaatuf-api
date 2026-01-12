@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\ApI\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\Wallet\WalletController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -12,52 +13,59 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
 
-// OAuth Routes (session)
+   // OAuth Routes (session)
 Route::middleware([
     EncryptCookies::class,
     AddQueuedCookiesToResponse::class,
     StartSession::class,
 ])->group(function () {
     Route::get('/oauth/{provider}/redirect', [AuthController::class, 'redirect'])
-        ->where('provider', 'google|facebook|Google|Facebook');
+        ->where('provider', '(google|facebook)');
 
     Route::get('/oauth/{provider}/callback', [AuthController::class, 'callback'])
-        ->where('provider', 'google|facebook|Google|Facebook');
+        ->where('provider', '(google|facebook)');
 });
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-
-// Email Verification
-
-// Verification link (auth)
+// Email Verification Routes
 Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill(); // يفعل الإيميل
-    return response()->json([
-        'message' => 'Email verified successfully'
-    ]);
-})->middleware(['auth:sanctum','signed'])
+    try {
+        $request->fulfill();
+        return response()->json([
+            'message' => 'Email verified successfully'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Invalid or expired verification link.'
+        ], 400);
+    }
+})->middleware(['auth:sanctum', 'signed'])
 ->name('verification.verify');
 
-// Resend verification email (needs auth)
 Route::post('/email/resend', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
-    return response()->json(['message' => 'Verification email resent']);
-})->middleware(['auth:sanctum']);
+    $user = $request->user();
+
+    if ($user->hasVerifiedEmail()) {
+        return response()->json([
+            'message' => 'Email is already verified'
+        ], 400);
+    }
+    $user->sendEmailVerificationNotification();
+
+    return response()->json([
+        'message' => 'Verification email resent successfully'
+    ], 200);
+})->middleware(['auth:sanctum', 'throttle:6,1']);
 
 
-// Authenticated Routes
 
-Route::middleware('auth:sanctum')->group(function () {
 
-    // Logout
-    Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Profile
-    Route::get('/profile', [ProfileController::class, 'showProfile']);
-    Route::post('/profile', [ProfileController::class, 'updateProfile']);
+
+
 
     Route::group(['middleware' => 'role:KP'], function () {
 
@@ -72,10 +80,26 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
-    // Protected test (requires profile completion) // test
-    Route::middleware('profile.complete')->get('/protected-test', function () {
-        return response()->json(['ok' => true, 'message' => 'You are allowed']);
-    });
+
+
+
+// Authenticated Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
+    Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.edit');
+
 
 });
+
+
+    // Route::middleware(['auth:sanctum', 'profile.completed', 'role.kr'])->group(function () {
+    // Route::post('/knowledge-requests', [KnowledgeRequestController::class, 'store']);
+// });
+
+  // // Admin Routes
+    // Route::middleware('admin')->group(function () {
+    //     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+    // });
+
 
