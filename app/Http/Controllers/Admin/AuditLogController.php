@@ -12,10 +12,8 @@ class AuditLogController extends Controller
     //
         public function index()
     {
-        // استرجاع السجلات مع تحميل البيانات المتعلقة بها
         $auditLogs = AuditLog::all();
 
-        // استخدام AuditLogResource لعرض السجلات بتنسيق منظم
         return AuditLogResource::collection($auditLogs);
     }
 }
