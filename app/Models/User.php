@@ -15,11 +15,16 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+
+    const KNOWLEDGE_PROVIDER = 'Knowledge Provider';
+    const KNOWLEDGE_REQUESTER = 'Knowledge Requester';
+    const ADMIN = 'Admin';
+
+    public const ADMIN_ROLE = [
+        self::KNOWLEDGE_PROVIDER,
+        self::KNOWLEDGE_REQUESTER,
+        self::ADMIN,
+    ];
     protected $fillable = [
         'full_name',
         'email',
@@ -67,5 +72,15 @@ class User extends Authenticatable implements MustVerifyEmail
         public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function wallets()
+    {
+        return $this->hasMany(Wallet::class);
+    }
+
+    public function primaryWallet()
+    {
+        return $this->hasOne(Wallet::class)->where('is_primary', true);
     }
 }

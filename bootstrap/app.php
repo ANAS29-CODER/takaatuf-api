@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckUserRole;
 use App\Http\Middleware\EnsureProfileComplete;
 use App\Http\Middleware\EnsureUserIsKR;
 use Illuminate\Foundation\Application;
@@ -13,11 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
- ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'profile.completed' => EnsureProfileComplete::class,
-            'role.kr' => EnsureUserIsKR::class,
-        ]);
+    ->withMiddleware(function (Middleware $middleware): void {
+        //
+           $middleware->alias([
+            'profile.complete' => EnsureProfileComplete::class,
+            'role' => CheckUserRole::class,
+           ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\ApI\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\Profile\ProfileController;
+use App\Http\Controllers\API\Wallet\WalletController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -66,6 +67,18 @@ Route::post('/email/resend', function (Request $request) {
 
 
 
+    Route::group(['middleware' => 'role:KP'], function () {
+
+        Route::get('/wallets', [WalletController::class, 'index']);
+        Route::post('/wallets', [WalletController::class, 'store']);
+        Route::get('/wallets/{id}', [WalletController::class, 'show']);
+        Route::put('/wallets/{id}', [WalletController::class, 'update']);
+        Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
+        Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
+     });
+
+    // Admin
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
 
 
