@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Resources\UserResource;
 use App\Repositories\SocialAccountRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\DB;
@@ -42,7 +43,7 @@ class AuthService
                 $token = $user->createToken('auth_token')->plainTextToken;
 
                 return [
-                    'user' => $user,
+                  'user' => new UserResource($user),
                     'token' => $token,
                     'profile_completed' => (bool) $user->profile_completed,
                 ];
@@ -53,7 +54,8 @@ class AuthService
 
             if (!$user) {
                 $user = $this->userRepo->create([
-                    'name' => $name,
+                    // 'name' => $name,
+                    'full_name' => $name,
                     'email' => $email,
                     'password' => bcrypt(Str::random(32)),
                     'profile_completed' => false,
@@ -75,7 +77,7 @@ class AuthService
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return [
-                'user' => $user,
+                'user' => new UserResource($user),
                 'token' => $token,
                 'profile_completed' => (bool) $user->profile_completed,
             ];
