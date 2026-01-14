@@ -15,13 +15,23 @@ class EnsureProfileComplete
      */
 
  public function handle(Request $request, Closure $next)
-{
-    
-    if (!auth()->user()->profile_completed) {
-        return redirect()->route('profile.edit')->with('message', 'Please complete your profile before proceeding.');
-    }
+    {
+        $user = $request->user();
 
-    return $next($request);
-}
+        $missingFields = [];
+
+        if (empty($user->city_neighborhood)) {
+            $missingFields[] = 'city_neighborhood';
+        }
+
+        if (!$user->profile_completed) {
+            return response()->json([
+                'message' => 'Profile is incomplete. Please complete your profile before creating a request.',
+                'missing_fields' => $missingFields
+            ], 403);
+        }
+
+        return $next($request);
+    }
 
 }

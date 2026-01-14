@@ -20,8 +20,8 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->boolean('profile_completed')->default(false);
-            $table->enum('role', ['kr', 'kp'])->default('kr'); // Role (Knowledge Provider or Knowledge Requester)
-            $table->string('city_neighborhood')->nullable();
+            $table->enum('role', ['Knowledge Requester', 'Knowledge Provider'])->default('Knowledge Requester');
+              $table->string('city_neighborhood')->nullable();
             $table->enum('wallet_type', ['ethereum', 'solana', 'bitcoin'])->nullable();
             $table->string('wallet_address')->nullable();
             $table->string('paypal_account')->nullable();

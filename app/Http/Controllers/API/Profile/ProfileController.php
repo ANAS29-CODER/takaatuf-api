@@ -67,6 +67,9 @@ class ProfileController extends Controller
                     ], 200);
                 }
 
+    // تحديث القيم لتتوافق مع القيم في قاعدة البيانات
+    // $role = ($data['user_confirmation'] === 'I am in Gaza') ? 'kp' : 'kr'; // "kp" = Knowledge Provider, "kr" = Knowledge Requester
+
                 $role = ($data['user_confirmation'] === 'I am in Gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
             }
 

@@ -12,5 +12,6 @@ use App\Models\KnowledgeRequest;
         return KnowledgeRequest::create($data);
     }
 
+
 }
 

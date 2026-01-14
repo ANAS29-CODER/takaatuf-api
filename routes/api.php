@@ -60,29 +60,6 @@ Route::post('/email/resend', function (Request $request) {
     ], 200);
 })->middleware(['auth:sanctum', 'throttle:6,1']);
 
-
-
-
-
-
-
-
-    Route::group(['middleware' => 'role:KP'], function () {
-
-        Route::get('/wallets', [WalletController::class, 'index']);
-        Route::post('/wallets', [WalletController::class, 'store']);
-        Route::get('/wallets/{id}', [WalletController::class, 'show']);
-        Route::put('/wallets/{id}', [WalletController::class, 'update']);
-        Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
-        Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
-     });
-
-    // Admin
-    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
-
-
-
-
 // Authenticated Routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -91,6 +68,38 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 });
+
+
+Route::group([
+    'middleware' => ['auth:sanctum', 'profile.completed']
+], function () {
+
+    // Knowledge Provider (KP) routes
+    Route::group(['middleware' => 'role:KP'], function () {
+        Route::get('/wallets', [WalletController::class, 'index']);
+        Route::post('/wallets', [WalletController::class, 'store']);
+        Route::get('/wallets/{id}', [WalletController::class, 'show']);
+        Route::put('/wallets/{id}', [WalletController::class, 'update']);
+        Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
+        Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
+    });
+
+    // Knowledge Requester (KR) routes
+    Route::group(['middleware' => 'role:KR'], function () {
+        Route::post('/knowledge-requests', [KnowledgeRequestController::class, 'store']);
+    });
+
+});
+
+
+
+
+    // Admin
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+
+
+
+
 
 
     // Route::middleware(['auth:sanctum', 'profile.completed', 'role.kr'])->group(function () {

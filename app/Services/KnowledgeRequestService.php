@@ -1,52 +1,49 @@
 <?php
+// app/Services/KnowledgeRequestService.php
 
 namespace App\Services;
 
-use App\Models\KnowledgeRequest;
-use App\Models\User;
+use App\Repositories\KnowledgeRequestMediaRepository as RepositoriesKnowledgeRequestMediaRepository;
 use App\Repositories\KnowledgeRequestRepository;
+use Illuminate\Support\Facades\Storage;
+use KnowledgeRequestMediaRepository;
 
 class KnowledgeRequestService
 {
+    protected $requests;
+    protected $media;
+
     public function __construct(
-        protected KnowledgeRequestRepository $repository
-    ) {}
+        KnowledgeRequestRepository $requests,
+        RepositoriesKnowledgeRequestMediaRepository $media
+    ) {
+        $this->requests = $requests;
+        $this->media = $media;
+    }
 
-    public function create(array $data, User $user)
+    public function calculateBudget(float $pay, int $count): float
     {
-        $data['user_id'] = $user->id;
+        return ($pay * $count) + 5;
+    }
 
-        $data['total_budget'] =
-            ($data['pay_per_kp'] * $data['number_of_providers']) + 5;
+    public function createRequest(array $data)
+    {
+        return $this->requests->create($data);
+    }
 
-        $attachments = $data['attachments'] ?? [];
-        unset($data['attachments']);
+    public function storeMedia(int $requestId, array $files)
+    {
+        foreach ($files as $file) {
+            $mime = $file->getMimeType();
+            $type = str_contains($mime, 'video') ? 'video' : 'image';
 
-        $request = $this->repository->create($data);
+            $path = $file->store('knowledge_requests', 'public');
 
-        foreach ($attachments as $file) {
-            $type = str_contains($file->getMimeType(), 'video')
-                ? 'video'
-                : 'image';
-
-            if ($type === 'image' && $file->getSize() > 10 * 1024 * 1024) {
-                throw new \DomainException('Image exceeds 10MB');
-            }
-
-            if ($type === 'video' && $file->getSize() > 100 * 1024 * 1024) {
-                throw new \DomainException('Video exceeds 100MB');
-            }
-
-            $path = $file->store('knowledge_requests');
-
-            $request->attachments()->create([
+            $this->media->create([
+                'knowledge_request_id' => $requestId,
+                'file_path' => $path,
                 'type' => $type,
-                'path' => $path,
-                'size' => $file->getSize(),
             ]);
         }
-
-        return $request;
     }
 }
-
