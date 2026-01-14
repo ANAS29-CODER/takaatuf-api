@@ -23,7 +23,7 @@ class KnowledgeRequest extends Model
 
      public function media()
     {
-        return $this->hasMany(KnowledgeRequestMediaRepository::class);
+        return $this->hasMany(KnowledgeRequestMedia::class);
     }
 
     public function user()
