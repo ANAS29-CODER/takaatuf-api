@@ -4,18 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class KnowledgeRequestAttachment extends Model
+class KnowledgeRequestMedia extends Model
 {
     //
 
-      protected $fillable = [
+       protected $fillable = [
         'knowledge_request_id',
+        'file_path',
         'type',
-        'path',
-        'size',
     ];
 
-      public function knowledgeRequest()
+    public function request()
     {
         return $this->belongsTo(KnowledgeRequest::class);
     }

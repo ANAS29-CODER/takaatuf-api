@@ -3,25 +3,32 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use KnowledgeRequestMediaRepository;
 
 class KnowledgeRequest extends Model
 {
     //
 
-     protected $fillable = [
+    protected $fillable = [
         'user_id',
         'category',
         'details',
         'pay_per_kp',
-        'number_of_providers',
+        'number_of_kps',
+        'review_fee',
         'total_budget',
         'neighborhood',
-        'status'
+        'status',
+        'progress',
+        'due_date',
+        'created_by',
+        'updated_by'
+
     ];
 
-    public function attachments()
+     public function media()
     {
-        return $this->hasMany(KnowledgeRequestAttachment::class);
+        return $this->hasMany(KnowledgeRequestMedia::class);
     }
 
     public function user()
