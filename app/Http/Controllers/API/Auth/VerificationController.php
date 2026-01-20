@@ -11,14 +11,19 @@ class VerificationController extends Controller
 {
     //
 
-      public function verifyEmail($id, $hash)
-    {
-        $user = User::findOrFail($id);
-        if (Hash::check($hash, $user->getEmailVerificationHash())) {
-            $user->markEmailAsVerified();
-            return response()->json(['message' => 'Email verified successfully']);
-        }
-
-        return response()->json(['message' => 'Invalid verification link'], 400);
+  public function resend(Request $request)
+{
+    if ($request->user()->hasVerifiedEmail()) {
+        return response()->json([
+            'message' => 'Email already verified'
+        ], 400);
     }
+
+    $request->user()->sendEmailVerificationNotification();
+
+    return response()->json([
+        'message' => 'Verification email resent'
+    ]);
+}
+
 }

@@ -14,14 +14,14 @@ class EnsureProfileComplete
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
 
-    public function handle(Request $request, Closure $next)
-    {
-        // إذا كانت profile_completed false، قم بإعادة التوجيه إلى صفحة البروفايل
-        if (auth()->user()->profile_completed === false) {
-            return redirect('profile')->with('message', 'Please complete your profile before proceeding.');
-        }
+ public function handle(Request $request, Closure $next)
+{
+    
+    if (!auth()->user()->profile_completed) {
+        return redirect()->route('profile.edit')->with('message', 'Please complete your profile before proceeding.');
+    }
 
-        return $next($request);
-
+    return $next($request);
 }
+
 }

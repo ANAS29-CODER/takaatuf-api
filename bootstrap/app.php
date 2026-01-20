@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\CheckUserRole;
 use App\Http\Middleware\EnsureProfileComplete;
+use App\Http\Middleware\EnsureUserIsKR;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,9 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
            $middleware->alias([
-            'profile.complete' => EnsureProfileComplete::class
+            'profile.complete' => EnsureProfileComplete::class,
+            'role' => CheckUserRole::class,
            ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();
