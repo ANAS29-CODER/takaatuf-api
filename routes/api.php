@@ -5,6 +5,7 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\ApI\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\Wallet\WalletController;
+use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -86,25 +87,16 @@ Route::group([
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
-        Route::post('/knowledge-requests', [KnowledgeRequestController::class, 'store']);
+      Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
+         Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
+         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
     });
 
 });
 
-
-
-
     // Admin
     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
-
-
-
-
-
-    // Route::middleware(['auth:sanctum', 'profile.completed', 'role.kr'])->group(function () {
-    // Route::post('/knowledge-requests', [KnowledgeRequestController::class, 'store']);
-// });
 
   // // Admin Routes
     // Route::middleware('admin')->group(function () {

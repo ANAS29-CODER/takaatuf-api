@@ -5,7 +5,7 @@ use App\Models\KnowledgeRequestMedia;
 
 class KnowledgeRequestMediaRepository
 {
-      public function create(array $data): KnowledgeRequestMediaRepository
+        public function create(array $data): KnowledgeRequestMedia
     {
         return KnowledgeRequestMedia::create($data);
     }

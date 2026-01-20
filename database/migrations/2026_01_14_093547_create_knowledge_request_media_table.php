@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('knowledge_request_id')
                   ->constrained('knowledge_requests')
                   ->cascadeOnDelete();
-
             $table->string('file_path');
             $table->enum('type', ['image', 'video']);
 

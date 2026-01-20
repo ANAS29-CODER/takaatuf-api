@@ -37,7 +37,8 @@ class CreateKnowledgeRequest extends FormRequest
             'number_of_kps' => 'required|integer|min:1',
 
             // Neighborhood
-            'neighborhood' => 'required|string',
+             'neighborhood' => 'required|in:All locations,Gaza City,Rimal,Shujaiya,Tal Al-Hawa,Sheikh Radwan,Al-Nasr,Al Darraj,Al-Tuffah,Al-Sabra,Al-Shati,Al-Moghrarah,Deir Al-Balah,Al-Nusairat,Al-Bureij,Al-Maghazi,Khan Younis,Rafah',
+
 
             // Media (optional)
             'media.*' => 'nullable|file',
@@ -56,6 +57,6 @@ class CreateKnowledgeRequest extends FormRequest
             'number_of_kps.integer' => 'Number of KPs must be an integer.',
             'neighborhood.required' => 'Neighborhood is required.',
         ];
-    } 
+    }
 
 }

@@ -3,10 +3,13 @@
 
 namespace App\Services;
 
-use App\Repositories\KnowledgeRequestMediaRepository as RepositoriesKnowledgeRequestMediaRepository;
+use App\Models\KnowledgeRequestMedia;
+
 use App\Repositories\KnowledgeRequestRepository;
+use App\Repositories\KnowledgeRequestMediaRepository;
 use Illuminate\Support\Facades\Storage;
-use KnowledgeRequestMediaRepository;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 
 class KnowledgeRequestService
 {
@@ -15,7 +18,7 @@ class KnowledgeRequestService
 
     public function __construct(
         KnowledgeRequestRepository $requests,
-        RepositoriesKnowledgeRequestMediaRepository $media
+        KnowledgeRequestMediaRepository $media
     ) {
         $this->requests = $requests;
         $this->media = $media;
@@ -31,19 +34,41 @@ class KnowledgeRequestService
         return $this->requests->create($data);
     }
 
-    public function storeMedia(int $requestId, array $files)
+    public function storeMedia(int $requestId, array|UploadedFile $files): Collection
     {
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        $savedMedia = collect();
+
         foreach ($files as $file) {
-            $mime = $file->getMimeType();
-            $type = str_contains($mime, 'video') ? 'video' : 'image';
 
-            $path = $file->store('knowledge_requests', 'public');
+            $path = $file->store('knowledge_requests/media', 'public');
 
-            $this->media->create([
+            $type = str_contains($file->getMimeType(), 'image')
+                ? 'image'
+                : 'video';
+
+            $media = $this->media->create([
                 'knowledge_request_id' => $requestId,
                 'file_path' => $path,
                 'type' => $type,
             ]);
+
+            $savedMedia->push($media);
         }
+
+        return $savedMedia;
+    }
+
+    public function getActiveRequests($user)
+    {
+        return $this->requests->getActiveRequests($user);
+    }
+
+    public function getCompletedRequests($user)
+    {
+        return $this->requests->getCompletedRequests($user);
     }
 }

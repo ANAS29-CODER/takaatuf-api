@@ -19,6 +19,11 @@ class KnowledgeRequest extends Model
         'total_budget',
         'neighborhood',
         'status',
+        'progress',
+        'due_date',
+        'created_by',
+        'updated_by'
+
     ];
 
      public function media()
