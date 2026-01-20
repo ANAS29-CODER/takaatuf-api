@@ -20,12 +20,19 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
+        if (!$user->profile_completed) {
+            return response()->json([
+                'message' => 'Your profile is incomplete. Please complete your profile to access all features.',
+            ], 400);
+        }
+
         $response = [
             'full_name' => $user->full_name,
             'city_neighborhood' => $user->city_neighborhood,
             'profile_completed' => $user->profile_completed,
             'role' => $user->role,
         ];
+
 
         if ($user->role === 'Knowledge Requester') {
             $response['paypal_account'] = $user->paypal_account;
@@ -63,9 +70,10 @@ class ProfileController extends Controller
                         'message' => 'Please confirm your location',
                         'category' => $category,
                         'ip_region' => $location['region'] ?? 'Unknown',
-                        'possible_roles' => ['I am in Gaza', 'I am outside Gaza'], // يمكن إضافة الخيارات هنا لتوضيح للمستخدم
+                        'possible_roles' => ['I am in Gaza', 'I am outside Gaza'],
                     ], 200);
                 }
+
 
                 $role = ($data['user_confirmation'] === 'I am in Gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
             }
@@ -89,7 +97,7 @@ class ProfileController extends Controller
             $response = [
                 // 'full_name' => $user->full_name,
                 // 'city_neighborhood' => $user->city_neighborhood,
-                  'message' => 'Profile has been updated successfully!',
+                'message' => 'Profile has been updated successfully!',
                 'profile_completed' => $user->profile_completed,
                 'role' => $user->role,
             ];

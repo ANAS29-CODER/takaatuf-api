@@ -13,31 +13,53 @@ return new class extends Migration
     {
         Schema::create('knowledge_requests', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->enum('category', [
+                'Survey',
+                'Essay',
+                'Photo',
+                'Video',
+                'Errand'
+            ]);
+            $table->text('details');
+            $table->decimal('pay_per_kp', 8, 2);
 
-    $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->integer('number_of_kps');
 
-    $table->enum('category', [
-        'survey',
-        'essay',
-        'photos',
-        'videos',
-        'errand'
-    ]);
+            $table->decimal('review_fee', 8, 2)->default(5);
+            $table->decimal('total_budget', 8, 2);
+            
+            $table->enum('neighborhood', [
+                'All locations',
+                'Gaza City',
+                'Rimal',
+                'Shujaiya',
+                'Tal Al-Hawa',
+                'Sheikh Radwan',
+                'Al-Nasr',
+                'Al Darraj',
+                'Al-Tuffah',
+                'Al-Sabra',
+                'Al-Shati',
+                'Al-Moghrarah',
+                'Deir Al-Balah',
+                'Al-Nusairat',
+                'Al-Bureij',
+                'Al-Maghazi',
+                'Khan Younis',
+                'Rafah'
+            ]);
 
-    $table->text('details');
+            $table->enum('status', ['active', 'completed'])->default('active');
 
-    $table->decimal('pay_per_kp', 10, 2);
-    $table->unsignedInteger('number_of_providers');
+            $table->integer('progress')->default(0); // For tracking progress 0 to 100%
 
-    $table->decimal('total_budget', 10, 2); // (pay_per_kp * providers) + 5
+            $table->date('due_date')->nullable();
+            $table->foreignId('created_by')->constrained('users')->nullable();
+            $table->foreignId('updated_by')->constrained('users')->nullable();
 
-    $table->string('neighborhood');
 
-    $table->enum('status', ['pending', 'paid', 'assigned', 'completed', 'cancelled'])
-          ->default('pending');
-
-    $table->timestamps();
-         
+            $table->timestamps();
         });
     }
 

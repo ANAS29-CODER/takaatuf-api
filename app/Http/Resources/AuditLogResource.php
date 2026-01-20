@@ -18,7 +18,7 @@ class AuditLogResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id,
             'location_category' => $this->location_category,
-            'location' => json_decode($this->location), // تحويل الموقع إلى مصفوفة من JSON
+            'location' => json_decode($this->location), 
             'user_confirmation' => $this->user_confirmation,
             'created_at' => $this->created_at->toDateTimeString(),
         ];
