@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('amount', 10, 2);
             $table->foreignId('wallet_id')->constrained()->onDelete('cascade');
             $table->enum('status', ['pending', 'approved', 'rejected', 'completed', 'failed'])->default('pending');
-            $table->timestamp('processed_at')->nullable();
+            $table->timestamp('payout_at')->nullable();
             $table->timestamps();
 
             $table->index('user_id');

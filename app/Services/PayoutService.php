@@ -82,7 +82,6 @@ class PayoutService
             ];
         }
 
-        // Get wallet - either specified or primary
         if ($walletId) {
             $wallet = $this->walletRepo->findByUserAndId($user->id, $walletId);
             if (!$wallet) {
@@ -108,8 +107,7 @@ class PayoutService
             return $this->payoutRepo->create([
                 'user_id' => $user->id,
                 'amount' => $currentEarnings,
-                'wallet_address' => $wallet->wallet_address,
-                'wallet_type' => $wallet->wallet_type,
+                'wallet_id' => $wallet->id,
                 'status' => Payout::STATUS_PENDING,
             ]);
         });

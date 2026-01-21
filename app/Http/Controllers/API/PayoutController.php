@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\API\Payout;
+namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PayoutResource;
+use App\Models\User;
 use App\Services\PayoutService;
 use Illuminate\Http\Request;
 
@@ -14,6 +15,7 @@ class PayoutController extends Controller
     public function __construct(PayoutService $payoutService)
     {
         $this->payoutService = $payoutService;
+
     }
 
     /**
@@ -58,21 +60,10 @@ class PayoutController extends Controller
         ]);
     }
 
-    /**
-     * Request a new payout
-     *
-     * @param  Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function requestPayout(Request $request)
     {
         $user = auth()->user();
 
-        if ($user->role !== 'Knowledge Provider') {
-            return response()->json([
-                'message' => 'Only Knowledge Providers can request payouts.',
-            ], 403);
-        }
 
         $validated = $request->validate([
             'wallet_id' => 'nullable|integer|exists:wallets,id',
@@ -99,21 +90,10 @@ class PayoutController extends Controller
         }
     }
 
-    /**
-     * Get a single payout by ID
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show(int $id)
     {
         $user = auth()->user();
 
-        if ($user->role !== 'Knowledge Provider') {
-            return response()->json([
-                'message' => 'Only Knowledge Providers can access payout details.',
-            ], 403);
-        }
 
         $payout = $this->payoutService->getPayoutForUser($id, $user->id);
 
