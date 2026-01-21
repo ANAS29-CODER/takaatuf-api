@@ -28,6 +28,11 @@ use App\Models\KnowledgeRequest;
             ->get();
     }
 
+    // public function getAvailableRequests(){
+
+    //     return KnowledgeRequest::where('status')
+
+    // }
 
 }
 
