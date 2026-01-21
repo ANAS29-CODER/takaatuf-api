@@ -25,13 +25,13 @@ class EarningRepository
     {
         $lastCompletedPayout = Payout::where('user_id', $userId)
             ->where('status', Payout::STATUS_COMPLETED)
-            ->orderBy('processed_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->first();
 
         $query = Earning::where('user_id', $userId);
 
         if ($lastCompletedPayout) {
-            $query->where('created_at', '>', $lastCompletedPayout->processed_at);
+            $query->where('created_at', '>', $lastCompletedPayout->created_at);
         }
 
         return (float) $query->sum('amount');

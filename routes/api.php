@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
-use App\Http\Controllers\ApI\KnowldgeRequest\KnowledgeRequestController;
+use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
+use App\Http\Controllers\API\PayoutController;
 use App\Http\Controllers\API\Profile\ProfileController;
-use App\Http\Controllers\API\Wallet\WalletController;
+use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -14,7 +15,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
 
-   // OAuth Routes (session)
+// OAuth Routes (session)
 Route::middleware([
     EncryptCookies::class,
     AddQueuedCookiesToResponse::class,
@@ -44,7 +45,7 @@ Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $requ
         ], 400);
     }
 })->middleware(['auth:sanctum', 'signed'])
-->name('verification.verify');
+    ->name('verification.verify');
 
 Route::post('/email/resend', function (Request $request) {
     $user = $request->user();
@@ -66,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
     Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.edit');
+    Route::put('/profile/location', [ProfileController::class, 'updateWorkingLocation']);
 
 
 });
@@ -75,15 +77,22 @@ Route::group([
     'middleware' => ['auth:sanctum', 'profile.completed']
 ], function () {
 
-    // Knowledge Provider (KP) routes
-    Route::group(['middleware' => 'role:KP'], function () {
+        Route::group(['middleware' => 'role:KP'], function () {
+        //wallet
         Route::get('/wallets', [WalletController::class, 'index']);
         Route::post('/wallets', [WalletController::class, 'store']);
         Route::get('/wallets/{id}', [WalletController::class, 'show']);
         Route::put('/wallets/{id}', [WalletController::class, 'update']);
         Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
         Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
-    });
+
+        //paypout
+        Route::get('/payouts', [PayoutController::class, 'index']);
+        Route::post('/payouts/request', [PayoutController::class, 'requestPayout']);
+        Route::get('/payouts/{id}', [PayoutController::class, 'show']);
+
+
+     });
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
@@ -91,7 +100,6 @@ Route::group([
          Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
          Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
     });
-
 });
 
     // Admin
@@ -102,5 +110,3 @@ Route::group([
     // Route::middleware('admin')->group(function () {
     //     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
     // });
-
-

@@ -29,14 +29,14 @@ class Payout extends Model
         'amount',
         'wallet_id',
         'status',
-        'processed_at',
+        'payout_at',
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
-            'processed_at' => 'datetime',
+            'payout_at' => 'datetime',
         ];
     }
 

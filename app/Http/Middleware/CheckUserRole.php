@@ -13,12 +13,16 @@ class CheckUserRole
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string $role_type): Response
     {
-        if ($role === 'KP') {
+        //make the $role small letter
+
+        $role = strtolower($role_type);
+
+        if ($role === 'kp') {
             $role = 'Knowledge Provider';
         }
-        if ($role === 'KR') {
+        if ($role === 'kr') {
             $role = 'Knowledge Requester';
         }
 

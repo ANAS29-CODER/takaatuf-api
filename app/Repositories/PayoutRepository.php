@@ -35,7 +35,7 @@ class PayoutRepository
     {
         return Payout::where('user_id', $userId)
             ->where('status', Payout::STATUS_COMPLETED)
-            ->orderBy('processed_at', 'desc')
+            ->orderBy('payout_at', 'desc')
             ->first();
     }
 
@@ -71,7 +71,7 @@ class PayoutRepository
         }
 
         if (in_array($status, [Payout::STATUS_COMPLETED, Payout::STATUS_FAILED])) {
-            $payout->processed_at = now();
+            $payout->payout_at = now();
         }
 
         $payout->save();
