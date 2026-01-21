@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
+use App\Models\User;
 use App\Repositories\UserRepository;
 use GeoIp2\Database\Reader;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,7 @@ class ProfileService
         try {
             $reader = new Reader(storage_path('app/geoip/GeoLite2-City.mmdb'));
             // $ip = '185.34.85.10';  // مثال على IP داخل غزة
-        //    $ip = '127.0.0.1';
+            //    $ip = '127.0.0.1';
             $record = $reader->city($ip);
 
             return [
@@ -97,5 +98,78 @@ class ProfileService
             'user_confirmation' => $userConfirmation,
             'created_at' => now(),
         ]);
+    }
+
+    public function validateWalletAddress(string $type, string $address): array
+    {
+        $patterns = [
+            'ethereum' => '/^0x[a-fA-F0-9]{40}$/',
+            'solana' => '/^[1-9A-HJ-NP-Za-km-z]{32,44}$/',
+            'bitcoin' => '/^(1|3)[a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/',
+        ];
+
+        if (!isset($patterns[$type])) {
+            return [
+                'valid' => false,
+                'message' => 'Invalid wallet type. Supported types: ethereum, solana, bitcoin.',
+            ];
+        }
+
+        if (!preg_match($patterns[$type], $address)) {
+            $typeLabels = [
+                'ethereum' => 'Ethereum (must start with 0x followed by 40 hex characters)',
+                'solana' => 'Solana (32-44 base58 characters)',
+                'bitcoin' => 'Bitcoin (starts with 1, 3, or bc1)',
+            ];
+
+            return [
+                'valid' => false,
+                'message' => sprintf('Invalid %s address format.', $typeLabels[$type]),
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'message' => null,
+        ];
+    }
+
+    public function updateWallet(int $userId, string $walletType, string $walletAddress): array
+    {
+        $validation = $this->validateWalletAddress($walletType, $walletAddress);
+
+        if (!$validation['valid']) {
+            return [
+                'success' => false,
+                'message' => $validation['message'],
+            ];
+        }
+
+        $user = $this->userRepo->update($userId, [
+            'wallet_type' => $walletType,
+            'wallet_address' => $walletAddress,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Wallet address updated successfully.',
+            'user' => $user,
+        ];
+    }
+
+    /**
+     * Update user's working location
+     */
+    public function updateWorkingLocation(int $userId, string $cityNeighborhood): array
+    {
+        $user = $this->userRepo->update($userId, [
+            'city_neighborhood' => $cityNeighborhood,
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Working location updated successfully.',
+            'user' => $user,
+        ];
     }
 }

@@ -28,7 +28,7 @@ class PayoutFactory extends Factory
             'wallet_type' => fake()->randomElement(['ethereum', 'solana', 'bitcoin']),
             'status' => Payout::STATUS_PENDING,
             'admin_notes' => null,
-            'processed_at' => null,
+            'payout_at' => null,
         ];
     }
 
@@ -39,7 +39,7 @@ class PayoutFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Payout::STATUS_PENDING,
-            'processed_at' => null,
+            'payout_at' => null,
         ]);
     }
 
@@ -50,7 +50,7 @@ class PayoutFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Payout::STATUS_APPROVED,
-            'processed_at' => null,
+            'payout_at' => null,
         ]);
     }
 
@@ -61,7 +61,7 @@ class PayoutFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Payout::STATUS_COMPLETED,
-            'processed_at' => now(),
+            'payout_at' => now(),
         ]);
     }
 
@@ -72,7 +72,7 @@ class PayoutFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Payout::STATUS_REJECTED,
-            'processed_at' => now(),
+            'payout_at' => now(),
             'admin_notes' => fake()->sentence(),
         ]);
     }
@@ -84,7 +84,7 @@ class PayoutFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => Payout::STATUS_FAILED,
-            'processed_at' => now(),
+            'payout_at' => now(),
             'admin_notes' => fake()->sentence(),
         ]);
     }

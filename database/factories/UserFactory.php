@@ -24,11 +24,17 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'full_name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'profile_completed' => false,
+            'role' => 'kr',
+            'city_neighborhood' => null,
+            'wallet_type' => null,
+            'wallet_address' => null,
+            'paypal_account' => null,
         ];
     }
 
@@ -39,6 +45,33 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Create a Knowledge Provider user.
+     */
+    public function knowledgeProvider(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'Knowledge Provider',
+            'wallet_type' => 'ethereum',
+            'wallet_address' => '0x' . Str::random(40),
+            'profile_completed' => true,
+            'city_neighborhood' => 'Gaza City',
+        ]);
+    }
+
+    /**
+     * Create a Knowledge Requester user.
+     */
+    public function knowledgeRequester(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'Knowledge Requester',
+            'paypal_account' => fake()->safeEmail(),
+            'profile_completed' => true,
+            'city_neighborhood' => fake()->city(),
         ]);
     }
 }

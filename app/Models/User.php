@@ -20,7 +20,7 @@ class User extends Authenticatable implements MustVerifyEmail
     const KNOWLEDGE_REQUESTER = 'Knowledge Requester';
     const ADMIN = 'Admin';
 
-    public const ADMIN_ROLE = [
+    public const USER_ROLE = [
         self::KNOWLEDGE_PROVIDER,
         self::KNOWLEDGE_REQUESTER,
         self::ADMIN,
@@ -72,6 +72,16 @@ class User extends Authenticatable implements MustVerifyEmail
         public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function earnings()
+    {
+        return $this->hasMany(Earning::class);
+    }
+
+    public function payouts()
+    {
+        return $this->hasMany(Payout::class);
     }
 
     public function wallets()

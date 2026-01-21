@@ -21,7 +21,7 @@ class PayoutResource extends JsonResource
             'wallet_address' => Wallet::where(),
             'wallet_type' => $this->wallet_type,
             'status' => $this->status,
-            'processed_at' => $this->processed_at ? $this->processed_at->format('Y-m-d H:i:s') : null,
+            'payout_at' => $this->payout_at ? $this->payout_at->format('Y-m-d H:i:s') : null,
         ];
     }
 }

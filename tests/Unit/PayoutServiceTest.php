@@ -70,7 +70,7 @@ class PayoutServiceTest extends TestCase
             'user_id' => $this->knowledgeProvider->id,
             'amount' => 50.00,
             'status' => Payout::STATUS_COMPLETED,
-            'processed_at' => now()->subDays(5),
+            'payout_at' => now()->subDays(5),
         ]);
 
         // New earnings after payout
