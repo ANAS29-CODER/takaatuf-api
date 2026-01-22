@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('knowledge_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // the user who create request
             $table->enum('category', [
                 'Survey',
                 'Essay',
@@ -23,12 +24,9 @@ return new class extends Migration
             ]);
             $table->text('details');
             $table->decimal('pay_per_kp', 8, 2);
-
             $table->integer('number_of_kps');
-
             $table->decimal('review_fee', 8, 2)->default(5);
             $table->decimal('total_budget', 8, 2);
-            
             $table->enum('neighborhood', [
                 'All locations',
                 'Gaza City',
@@ -49,11 +47,8 @@ return new class extends Migration
                 'Khan Younis',
                 'Rafah'
             ]);
-
-            $table->enum('status', ['active', 'completed'])->default('active');
-
-            $table->integer('progress')->default(0); // For tracking progress 0 to 100%
-
+           $table->enum('status', ['available', 'active', 'completed'])->default('available');
+            $table->integer('progress')->default(0);
             $table->date('due_date')->nullable();
             $table->foreignId('created_by')->constrained('users')->nullable();
             $table->foreignId('updated_by')->constrained('users')->nullable();

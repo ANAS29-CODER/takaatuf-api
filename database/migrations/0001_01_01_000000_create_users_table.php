@@ -25,8 +25,7 @@ return new class extends Migration
             $table->enum('wallet_type', ['ethereum', 'solana', 'bitcoin'])->nullable();
             $table->string('wallet_address')->nullable();
             $table->string('paypal_account')->nullable();
-
-            $table->timestamps(); // timestamps: created_at و updated_at
+            $table->timestamps();
         });
 
 

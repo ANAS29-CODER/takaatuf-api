@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('location_category');  // Match/Mismatch/Unknown
-            $table->text('location');  // الموقع المستخرج من الـ IP
-            $table->string('user_confirmation')->nullable();  // اختيار المستخدم
+            $table->string('location_category');
+            $table->text('location');
+            $table->string('user_confirmation')->nullable(); 
             $table->timestamps();
         });
     }
