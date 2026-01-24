@@ -10,7 +10,8 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * مسار الصفحة الرئيسية للتطبيق
      */
-    public const HOME = '/home';
+    // public const HOME = '/home';
+    public const HOME = '/email-verified';
 
     /**
      * تسجيل routes التطبيق

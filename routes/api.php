@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\API\Auth\VerificationController;
 use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\PayoutController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\Payment\PaymentController;
+use App\Models\User;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -30,22 +32,45 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-// Email Verification Routes
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    try {
-        $request->fulfill();
-        return response()->json([
-            'message' => 'Email verified successfully'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => 'Invalid or expired verification link.'
-        ], 400);
-    }
-})->middleware(['auth:sanctum', 'signed'])
-    ->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}',
+    [VerificationController::class, 'verify']
+)->name('verification.verify');
+
+// Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
+
+//     if (! $request->hasValidSignature()) {
+//         return response()->json([
+//             'message' => 'Invalid or expired verification link.'
+//         ], 400);
+//     }
+//     $user = User::find($id);
+
+//     if (! $user) {
+//         return response()->json([
+//             'message' => 'User not found.'
+//         ], 404);
+//     }
+
+//     if (! hash_equals(
+//         sha1($user->getEmailForVerification()),
+//         $hash
+//     )) {
+//         return response()->json([
+//             'message' => 'Invalid verification hash.'
+//         ], 400);
+//     }
+
+//     if (! $user->hasVerifiedEmail()) {
+//         $user->markEmailAsVerified();
+//     }
+//     return response()->json([
+//         'message' => 'Email verified successfully.'
+//     ]);
+
+// })->name('verification.verify');
+
 
 Route::post('/email/resend', function (Request $request) {
     $user = $request->user();
