@@ -73,7 +73,7 @@ class KnowledgeRequestController extends Controller
             'review_fee'    => config('knowledge_request.review_fee'),
             'total_budget'  => $total,
             'neighborhood'  => $data['neighborhood'],
-            'status'        => 'active',
+             'status'        => 'available',
             'progress'      => 0,
             'due_date'      => $data['due_date'] ?? null,
             'created_by'    => $request->user()->id,

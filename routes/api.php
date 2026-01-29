@@ -2,12 +2,13 @@
 
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\API\Auth\VerificationController;
 use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\PayoutController;
-use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\Payment\PaymentController;
+use App\Models\User;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -31,42 +32,18 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-// PayPal OAuth Callback (public route - user redirected from PayPal)
-Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
+Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-// Email Verification Routes
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    try {
-        $request->fulfill();
-        return response()->json([
-            'message' => 'Email verified successfully'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => 'Invalid or expired verification link.'
-        ], 400);
-    }
-})->middleware(['auth:sanctum', 'signed'])
-    ->name('verification.verify');
+Route::get('/email/verify/{id}/{hash}',
+    [VerificationController::class, 'verify']
+)->middleware(['signed'])->name('verification.verify');
 
-Route::post('/email/resend', function (Request $request) {
-    $user = $request->user();
-
-    if ($user->hasVerifiedEmail()) {
-        return response()->json([
-            'message' => 'Email is already verified'
-        ], 400);
-    }
-    $user->sendEmailVerificationNotification();
-
-    return response()->json([
-        'message' => 'Verification email resent successfully'
-    ], 200);
-})->middleware(['auth:sanctum', 'throttle:6,1']);
+Route::post('/email/resend', [VerificationController::class, 'resend'])
+    ->middleware(['auth:sanctum', 'throttle:6,1'])
+    ->name('verification.resend');
 
 // Authenticated Routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum', 'verified')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
     Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.edit');
@@ -78,7 +55,7 @@ Route::group([
     'middleware' => ['auth:sanctum', 'profile.completed']
 ], function () {
 
-    Route::group(['middleware' => 'role:KP'], function () {
+        Route::group(['middleware' => 'role:KP'], function () {
         //wallet
         Route::get('/wallets', [WalletController::class, 'index']);
         Route::post('/wallets', [WalletController::class, 'store']);
@@ -91,27 +68,20 @@ Route::group([
         Route::get('/payouts', [PayoutController::class, 'index']);
         Route::post('/payouts/request', [PayoutController::class, 'requestPayout']);
         Route::get('/payouts/{id}', [PayoutController::class, 'show']);
-    });
+
+
+     });
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
-        Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
-        Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
-        Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
-
-        // PayPal routes for Knowledge Requester
-        Route::prefix('paypal')->group(function () {
-            Route::get('/status', [PayPalController::class, 'status']);
-            Route::get('/account', [PayPalController::class, 'show']);
-            Route::post('/connect', [PayPalController::class, 'connect']);
-            Route::post('/email', [PayPalController::class, 'updateEmail']);
-            Route::post('/disconnect', [PayPalController::class, 'disconnect']);
-        });
+      Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
+         Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
+         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
     });
 });
 
-// Admin
-Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+    // Admin
+    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
 
   // // Admin Routes

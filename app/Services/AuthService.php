@@ -99,7 +99,7 @@ class AuthService
         return [
             'user' => $user,
             'token' => $token,
-            'status' => $user->profile_completed ? 'complete' : 'profile_incomplete',
+            'status' => $user->profile_completed ? 'Profile complete' : 'profile_incomplete',
         ];
     }
 

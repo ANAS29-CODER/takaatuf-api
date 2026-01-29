@@ -33,8 +33,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'oauth_provider_id',
         'profile_completed',
         'city_neighborhood',
-        'wallet_type',
-        'wallet_address',
         'paypal_account',
         'role',
     ];
@@ -93,6 +91,11 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Wallet::class)->where('is_primary', true);
     }
+    public function knowledgeRequests()
+{
+    return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request');
+}
+
 
     public function paypalAccount()
     {
