@@ -16,15 +16,18 @@ class ProfileController extends Controller
     protected $profileService;
     protected $payoutService;
     protected $walletService;
+    protected $paypalService;
 
     public function __construct(
         ProfileService $profileService,
         PayoutService $payoutService,
-        WalletService $walletService
+        WalletService $walletService,
+        PayPalService $paypalService
     ) {
         $this->profileService = $profileService;
         $this->payoutService = $payoutService;
         $this->walletService = $walletService;
+        $this->paypalService = $paypalService;
     }
 
     public function showProfile()
@@ -39,6 +42,7 @@ class ProfileController extends Controller
 
         $response = [
             'name' => $user->full_name,
+            'email' => $user->email,
             'city_neighborhood' => $user->city_neighborhood,
             'profile_completed' => $user->profile_completed,
             'role' => $user->role,
@@ -47,6 +51,8 @@ class ProfileController extends Controller
 
         if ($user->role === 'Knowledge Requester') {
             $response['paypal_account'] = $user->paypal_account;
+            $response['paypal_status'] = $this->profileService->getPayPalStatus($user);
+            $response['paypal_email'] = $user->paypalAccount?->email;
         } elseif ($user->role === User::KNOWLEDGE_PROVIDER) {
             // Get primary wallet from wallets table
             $primaryWallet = $this->walletService->getPrimaryWallet($user->id);
