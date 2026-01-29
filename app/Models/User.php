@@ -93,4 +93,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Wallet::class)->where('is_primary', true);
     }
+
+    public function paypalAccount()
+    {
+        return $this->hasOne(PaypalAccount::class);
+    }
 }
