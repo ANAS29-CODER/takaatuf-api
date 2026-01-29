@@ -70,7 +70,7 @@ class KnowledgeRequestController extends Controller
             'details'       => $data['details'],
             'pay_per_kp'    => $data['pay_per_kp'],
             'number_of_kps' => $data['number_of_kps'],
-            'review_fee'    => 5,
+            'review_fee'    => config('knowledge_request.review_fee'),
             'total_budget'  => $total,
             'neighborhood'  => $data['neighborhood'],
             'status'        => 'active',
