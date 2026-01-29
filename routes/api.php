@@ -5,10 +5,10 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Auth\VerificationController;
 use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
 use App\Http\Controllers\API\PayoutController;
+use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\Payment\PaymentController;
-use App\Models\User;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
@@ -32,7 +32,9 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+// PayPal OAuth Callback (public route - user redirected from PayPal)
+Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
 Route::get('/email/verify/{id}/{hash}',
     [VerificationController::class, 'verify']
@@ -55,7 +57,7 @@ Route::group([
     'middleware' => ['auth:sanctum', 'profile.completed']
 ], function () {
 
-        Route::group(['middleware' => 'role:KP'], function () {
+    Route::group(['middleware' => 'role:KP'], function () {
         //wallet
         Route::get('/wallets', [WalletController::class, 'index']);
         Route::post('/wallets', [WalletController::class, 'store']);
@@ -68,20 +70,27 @@ Route::group([
         Route::get('/payouts', [PayoutController::class, 'index']);
         Route::post('/payouts/request', [PayoutController::class, 'requestPayout']);
         Route::get('/payouts/{id}', [PayoutController::class, 'show']);
-
-
-     });
+    });
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
-      Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
-         Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
-         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
+        Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
+        Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
+        Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
+
+        // PayPal routes for Knowledge Requester
+        Route::prefix('paypal')->group(function () {
+            Route::get('/status', [PayPalController::class, 'status']);
+            Route::get('/account', [PayPalController::class, 'show']);
+            Route::post('/connect', [PayPalController::class, 'connect']);
+            Route::post('/email', [PayPalController::class, 'updateEmail']);
+            Route::post('/disconnect', [PayPalController::class, 'disconnect']);
+        });
     });
 });
 
-    // Admin
-    Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+// Admin
+Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
 
 
   // // Admin Routes
