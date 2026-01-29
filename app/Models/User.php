@@ -96,4 +96,9 @@ class User extends Authenticatable implements MustVerifyEmail
     return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request');
 }
 
+
+    public function paypalAccount()
+    {
+        return $this->hasOne(PaypalAccount::class);
+    }
 }

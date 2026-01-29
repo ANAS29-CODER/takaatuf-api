@@ -45,6 +45,21 @@ return [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
         'redirect' => 'https://localhost/api/oauth/facebook/callback',
+    ],
+
+    'paypal' => [
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+        'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'sandbox' => [
+            'base_url' => 'https://api-m.sandbox.paypal.com',
+            'web_url' => 'https://www.sandbox.paypal.com',
+        ],
+        'live' => [
+            'base_url' => 'https://api-m.paypal.com',
+            'web_url' => 'https://www.paypal.com',
+        ],
+        'redirect' => env('APP_URL') . '/api/paypal/callback',
 
     ],
 
