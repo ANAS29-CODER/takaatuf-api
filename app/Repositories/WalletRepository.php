@@ -87,10 +87,9 @@ class WalletRepository
          return $wallet;
         });
 
-        return response()->json([
+         return response()->json([
             'message' => 'Something went wrong while setting the primary wallet.',
         ]);
-
 
 
     }

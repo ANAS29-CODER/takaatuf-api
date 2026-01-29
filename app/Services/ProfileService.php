@@ -29,6 +29,7 @@ class ProfileService
         try {
             $reader = new Reader(storage_path('app/geoip/GeoLite2-City.mmdb'));
             // $ip = '185.34.85.10';  // مثال على IP داخل غزة
+            // $ip= '185.34.86.15';
             //    $ip = '127.0.0.1';
             $record = $reader->city($ip);
 
@@ -172,4 +173,25 @@ class ProfileService
             'user' => $user,
         ];
     }
+
+public function isProfileCompleted(User $user): bool
+{
+    if (
+        empty($user->full_name) ||
+        empty($user->city_neighborhood)||
+        empty($user->role)
+    ) {
+        return false;
+    }
+    if ($user->role === 'Knowledge Provider') {
+        return $user->wallets()->exists();
+    }
+    if ($user->role === 'Knowledge Requester') {
+        return !empty($user->paypal_account);
+    }
+
+    return false;
+}
+
+
 }

@@ -116,7 +116,7 @@ class AuthController extends Controller
     }
 
     /**
-     * تسجيل مستخدم جديد
+     * Register
      *
      * @param \App\Http\Requests\RegisterRequest $request
      * @return \Illuminate\Http\JsonResponse
@@ -143,7 +143,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // Login عادي
+    // Login with email
     public function login(LoginRequest $request)
     {
         try {
@@ -153,9 +153,9 @@ class AuthController extends Controller
             );
 
             return response()->json([
-                'user' => new UserResource($data['user']),
                 'token' => $data['token'],
                 'status' => $data['status'],
+                'user' => new UserResource($data['user']),
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 401);
