@@ -32,7 +32,7 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])  ->middleware('verified');;
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 

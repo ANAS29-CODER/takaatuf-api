@@ -44,7 +44,7 @@ return [
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect' => 'https://localhost/api/oauth/facebook/callback',
+        'redirect' => 'https://ola-unfused-sanjuana.ngrok-free.dev/api/oauth/facebook/callback',
     ],
 
     'paypal' => [

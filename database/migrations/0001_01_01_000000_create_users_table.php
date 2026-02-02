@@ -22,7 +22,6 @@ return new class extends Migration
             $table->boolean('profile_completed')->default(false);
            $table->enum('role', ['Knowledge Requester', 'Knowledge Provider'])->nullable();
           $table->string('city_neighborhood')->nullable();
-            $table->string('paypal_account')->nullable();
             $table->timestamps();
         });
 
