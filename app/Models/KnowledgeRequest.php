@@ -59,10 +59,42 @@ class KnowledgeRequest extends Model
     {
         return $this->hasMany(KnowledgeRequestMedia::class);
     }
+    /**
+     * Get the Knowledge Requester who created this request
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get all Knowledge Providers assigned to this request
+     */
+    public function knowledgeProviders()
+    {
+        return $this->belongsToMany(User::class, 'user_knowledge_request')
+            ->using(UserKnowledgeRequest::class)
+            ->withPivot(['status', 'progress', 'payout_amount', 'completed_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Alias for backwards compatibility
+     */
     public function users()
-{
-    return $this->belongsToMany(User::class, 'user_knowledge_request');
-}
+    {
+        return $this->knowledgeProviders();
+    }
 
+    /**
+     * Get count of KPs still needed for this request
+     */
+    public function getKpsStillNeededAttribute(): int
+    {
+        $assignedCount = $this->knowledgeProviders()
+            ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getActiveStatuses())
+            ->count();
 
+        return max(0, $this->number_of_kps - $assignedCount);
+    }
 }

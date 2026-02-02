@@ -90,10 +90,34 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Wallet::class)->where('is_primary', true);
     }
+    /**
+     * Get all knowledge requests assigned to this KP
+     */
     public function knowledgeRequests()
-{
-    return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request');
-}
+    {
+        return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request')
+            ->using(UserKnowledgeRequest::class)
+            ->withPivot(['status', 'progress', 'payout_amount', 'completed_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get active knowledge requests for this KP
+     */
+    public function activeKnowledgeRequests()
+    {
+        return $this->knowledgeRequests()
+            ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getActiveStatuses());
+    }
+
+    /**
+     * Get completed knowledge requests for this KP
+     */
+    public function completedKnowledgeRequests()
+    {
+        return $this->knowledgeRequests()
+            ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getCompletedStatuses());
+    }
 
 
     public function paypalAccount()
