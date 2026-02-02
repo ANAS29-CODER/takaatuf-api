@@ -8,6 +8,7 @@ use App\Http\Controllers\API\PayoutController;
 use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
+use App\Http\Controllers\API\KnowledgeProvider\KnowledgeProviderController;
 use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -58,7 +59,19 @@ Route::group([
 ], function () {
 
     Route::group(['middleware' => 'role:KP'], function () {
-        //wallet
+        // Knowledge Provider Dashboard
+        Route::get('/dashboard/kp', [KnowledgeProviderController::class, 'dashboard']);
+        Route::get('/dashboard/kp/earnings', [KnowledgeProviderController::class, 'earningsSummary']);
+        Route::get('/dashboard/kp/active', [KnowledgeProviderController::class, 'activeRequests']);
+        Route::get('/dashboard/kp/available', [KnowledgeProviderController::class, 'availableRequests']);
+        Route::get('/dashboard/kp/completed', [KnowledgeProviderController::class, 'completedRequests']);
+
+        // Knowledge Request Actions
+        Route::get('/requests/{id}', [KnowledgeProviderController::class, 'showRequest']);
+        Route::post('/requests/{id}/apply', [KnowledgeProviderController::class, 'applyToRequest']);
+        Route::put('/requests/{id}/progress', [KnowledgeProviderController::class, 'updateProgress']);
+
+        // Wallet Management
         Route::get('/wallets', [WalletController::class, 'index']);
         Route::post('/wallets', [WalletController::class, 'store']);
         Route::get('/wallets/{id}', [WalletController::class, 'show']);
@@ -66,7 +79,7 @@ Route::group([
         Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
         Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
 
-        //paypout
+        // Payout Management
         Route::get('/payouts', [PayoutController::class, 'index']);
         Route::post('/payouts/request', [PayoutController::class, 'requestPayout']);
         Route::get('/payouts/{id}', [PayoutController::class, 'show']);
