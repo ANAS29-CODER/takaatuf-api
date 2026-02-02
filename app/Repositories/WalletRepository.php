@@ -71,8 +71,7 @@ class WalletRepository
         return Wallet::destroy($walletId) > 0;
     }
 
-
-    public function setPrimary(int $userId, int $walletId): Wallet
+     public function setPrimary(int $userId, int $walletId): Wallet
     {
 
         DB::transaction(function () use ($userId, $walletId) {
@@ -87,12 +86,15 @@ class WalletRepository
          return $wallet;
         });
 
-         return response()->json([
+        return response()->json([
             'message' => 'Something went wrong while setting the primary wallet.',
         ]);
 
 
+
     }
+
+
 
     public function countByUserId(int $userId): int
     {

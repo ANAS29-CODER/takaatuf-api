@@ -33,7 +33,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'oauth_provider_id',
         'profile_completed',
         'city_neighborhood',
-        'paypal_account',
         'role',
     ];
 
