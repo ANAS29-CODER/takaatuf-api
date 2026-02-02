@@ -8,6 +8,7 @@ use App\Http\Resources\WalletResource;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\PayoutService;
+use App\Services\PayPalService;
 use App\Services\ProfileService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
@@ -44,7 +45,7 @@ class ProfileController extends Controller
 
         if ($user->role === 'Knowledge Requester') {
             $response['paypal_account'] = $user->paypal_account;
-            $response['paypal_status'] = $this->profileService->getPayPalStatus($user);
+            $response['paypal_status'] = $this->paypalService->getAccountStatus($user)['status'];
             $response['paypal_email'] = $user->paypalAccount?->email;
         } elseif ($user->role === User::KNOWLEDGE_PROVIDER) {
             // Get primary wallet from wallets table
