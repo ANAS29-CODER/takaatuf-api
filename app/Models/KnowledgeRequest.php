@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use KnowledgeRequestMediaRepository;
 
 class KnowledgeRequest extends Model
 {
+    use HasFactory;
 
      const STATUS_AVAILABLE = 'available';
      const STATUS_ACTIVE = 'active';
@@ -96,5 +97,21 @@ class KnowledgeRequest extends Model
             ->count();
 
         return max(0, $this->number_of_kps - $assignedCount);
+    }
+
+    /**
+     * Get all work submissions for this request
+     */
+    public function workSubmissions()
+    {
+        return $this->hasMany(WorkSubmission::class);
+    }
+
+    /**
+     * Get the user (alias for creator)
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
