@@ -195,4 +195,96 @@ class KnowledgeProviderRepository
             ->where('knowledge_request_id', $requestId)
             ->first();
     }
+
+    /**
+     * Get task page details for a KP
+     * Returns full request information with KP-specific assignment data
+     */
+    public function getTaskPageDetails(int $userId, int $requestId): ?KnowledgeRequest
+    {
+        $assignment = $this->getAssignment($userId, $requestId);
+
+        if (!$assignment) {
+            return null;
+        }
+
+        $request = KnowledgeRequest::with(['media', 'user'])
+            ->find($requestId);
+
+
+        if (!$request) {
+            return null;
+        }
+
+        // Attach KP-specific data
+        $request->kp_status = $assignment->status;
+        $request->kp_progress = $assignment->progress ?? 0;
+        $request->kp_payout_amount = $assignment->payout_amount ?? $request->pay_per_kp;
+        $request->kp_completed_at = $assignment->completed_at;
+
+        // Get total KPs assigned to this request
+        $request->total_kps_assigned = DB::table('user_knowledge_request')
+            ->where('knowledge_request_id', $requestId)
+            ->whereIn('status', array_merge(
+                UserKnowledgeRequest::getActiveStatuses(),
+                UserKnowledgeRequest::getCompletedStatuses()
+            ))
+            ->count();
+
+        return $request;
+    }
+
+    /**
+     * Update KP assignment status
+     */
+    public function updateAssignmentStatus(int $userId, int $requestId, string $status): bool
+    {
+        $updateData = [
+            'status' => $status,
+            'updated_at' => now(),
+        ];
+
+        if ($status === UserKnowledgeRequest::STATUS_COMPLETED || $status === UserKnowledgeRequest::STATUS_APPROVED) {
+            $updateData['completed_at'] = now();
+            $updateData['progress'] = 100;
+        }
+
+        return DB::table('user_knowledge_request')
+            ->where('user_id', $userId)
+            ->where('knowledge_request_id', $requestId)
+            ->update($updateData) > 0;
+    }
+
+    /**
+     * Check if assignment can be edited (not approved yet)
+     */
+    public function canEditAssignment(int $userId, int $requestId): bool
+    {
+        $assignment = $this->getAssignment($userId, $requestId);
+
+        if (!$assignment) {
+            return false;
+        }
+
+        return !in_array($assignment->status, [
+            UserKnowledgeRequest::STATUS_APPROVED,
+        ]);
+    }
+
+    /**
+     * Get assignment status label for display
+     */
+    public function getStatusLabel(string $status): string
+    {
+        $labels = [
+            UserKnowledgeRequest::STATUS_PENDING => 'Pending',
+            UserKnowledgeRequest::STATUS_IN_PROGRESS => 'In Progress',
+            UserKnowledgeRequest::STATUS_AWAITING_REVIEW => 'Submitted',
+            UserKnowledgeRequest::STATUS_COMPLETED => 'Completed',
+            UserKnowledgeRequest::STATUS_APPROVED => 'Approved',
+            UserKnowledgeRequest::STATUS_REJECTED => 'Rejected',
+        ];
+
+        return $labels[$status] ?? ucfirst(str_replace('_', ' ', $status));
+    }
 }

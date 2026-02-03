@@ -124,4 +124,12 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(PaypalAccount::class);
     }
+
+    /**
+     * Get all work submissions for this KP
+     */
+    public function workSubmissions()
+    {
+        return $this->hasMany(WorkSubmission::class);
+    }
 }

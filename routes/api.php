@@ -9,6 +9,7 @@ use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\API\KnowledgeProvider\KnowledgeProviderController;
+use App\Http\Controllers\API\KnowledgeProvider\TaskPageController;
 use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -33,7 +34,7 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])  ->middleware('verified');;
+Route::post('/login', [AuthController::class, 'login']);
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
@@ -70,6 +71,16 @@ Route::group([
         Route::get('/requests/{id}', [KnowledgeProviderController::class, 'showRequest']);
         Route::post('/requests/{id}/apply', [KnowledgeProviderController::class, 'applyToRequest']);
         Route::put('/requests/{id}/progress', [KnowledgeProviderController::class, 'updateProgress']);
+
+        // Task Page Routes
+        Route::prefix('task/{requestId}')->group(function () {
+            Route::get('/', [TaskPageController::class, 'show']);
+            Route::get('/status', [TaskPageController::class, 'getStatus']);
+            Route::post('/draft', [TaskPageController::class, 'saveDraft']);
+            Route::post('/media', [TaskPageController::class, 'uploadMedia']);
+            Route::delete('/media/{mediaId}', [TaskPageController::class, 'removeMedia']);
+            Route::post('/submit', [TaskPageController::class, 'submitWork']);
+        });
 
         // Wallet Management
         Route::get('/wallets', [WalletController::class, 'index']);
