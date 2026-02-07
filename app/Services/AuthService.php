@@ -39,11 +39,16 @@ class AuthService
                         $user->refresh();
                     }
                 }
+                // verify email now
+                if ($email && !$user->email_verified_at) {
+                    $user->email_verified_at = now();
+                    $user->save();
+                }
 
                 $token = $user->createToken('auth_token')->plainTextToken;
 
                 return [
-                  'user' => new UserResource($user),
+                    'user' => new UserResource($user),
                     'token' => $token,
                     'profile_completed' => (bool) $user->profile_completed,
                 ];
@@ -73,6 +78,11 @@ class AuthService
                     'avatar' => $socialUser->getAvatar(),
                 ]
             );
+            // verify email now
+            if ($email && !$user->email_verified_at) {
+                $user->email_verified_at = now();
+                $user->save();
+            }
 
             $token = $user->createToken('auth_token')->plainTextToken;
 

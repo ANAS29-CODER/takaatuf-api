@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Auth\VerificationController;
-use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
+use App\Http\Controllers\API\KnowldgeRequester\KnowledgeRequestController;
 use App\Http\Controllers\API\PayoutController;
 use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
@@ -34,7 +34,9 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
+
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
@@ -43,14 +45,14 @@ Route::get('/email/verify/{id}/{hash}',
 )->middleware(['signed'])->name('verification.verify');
 
 Route::post('/email/resend', [VerificationController::class, 'resend'])
-    ->middleware(['auth:sanctum', 'throttle:6,1'])
+    ->middleware(['throttle:6,1'])
     ->name('verification.resend');
 
 // Authenticated Routes
 Route::middleware('auth:sanctum', 'verified')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
-    Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.edit');
+    Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/location', [ProfileController::class, 'updateWorkingLocation']);
 });
 

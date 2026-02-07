@@ -1,7 +1,7 @@
 <?php
 // app/Http/Controllers/API/KnowledgeRequestController.php
 
-namespace App\Http\Controllers\API\KnowldgeRequest;
+namespace App\Http\Controllers\API\KnowldgeRequester;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateKnowledgeRequest;

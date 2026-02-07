@@ -137,31 +137,42 @@ class AuthController extends Controller
         $token = $user->createToken('Takaatuf App')->plainTextToken;
 
         return response()->json([
-            'user'    => $user,
+            'user'    => new UserResource($user),
             'token'   => $token,
             'message' => 'Registration successful, please verify your email.',
         ], 201);
     }
 
     // Login with email
+
     public function login(LoginRequest $request)
-    {
-        try {
-            $data = $this->authService->loginWithEmail(
-                $request->email,
-                $request->password
-            );
+{
+    try {
+        $user = User::where('email', $request->email)->first();
 
+        if ($user && !$user->hasVerifiedEmail()) {
             return response()->json([
-                'token' => $data['token'],
-                'status' => $data['status'],
-                'user' => new UserResource($data['user']),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 401);
+                'message' => 'You must verify your email before logging in.'
+            ], 403); // 403 = Forbidden
         }
-    }
 
+        $data = $this->authService->loginWithEmail(
+            $request->email,
+            $request->password
+        );
+
+        return response()->json([
+            'token' => $data['token'],
+            'status' => $data['status'],
+            'user' => new UserResource($data['user']),
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Invalid login credentials.'
+        ], 401);
+    }
+}
     // Logout
     public function logout(Request $request)
     {
