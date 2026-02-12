@@ -38,6 +38,8 @@ class KPDashboardResource extends JsonResource
             $sections['active_requests'] = $this->formatActiveRequests();
         }
 
+        $sections['pending_requests'] = $this->formatPendingRequests();
+
         // Completed requests always at bottom
         $sections['completed_requests'] = $this->formatCompletedRequests();
 
@@ -67,6 +69,27 @@ class KPDashboardResource extends JsonResource
         return [
             'count' => $items->count(),
             'items' => ActiveRequestResource::collection($items),
+            'empty_message' => null,
+        ];
+    }
+
+    /**
+     * Format pending requests section
+     */
+    protected function formatPendingRequests(): array
+    {
+        $items = $this->resource['pending_requests'];
+        if ($items->isEmpty()) {
+            return [
+                'count' => 0,
+                'items' => [],
+                'empty_message' => 'You have no pending requests at the moment.',
+            ];
+        }
+
+        return [
+            'count' => $items->count(),
+            'items' => PendingRequestResource::collection($items),
             'empty_message' => null,
         ];
     }

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\KnowldgeRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CreateKnowledgeRequest;
 use App\Http\Resources\KnowledgeRequestResource;
+use App\Models\KnowledgeRequest;
 use App\Services\KnowledgeRequestService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -70,10 +71,10 @@ class KnowledgeRequestController extends Controller
             'details'       => $data['details'],
             'pay_per_kp'    => $data['pay_per_kp'],
             'number_of_kps' => $data['number_of_kps'],
-            'review_fee'    => config('knowledge_request.review_fee'),
+            'review_fee'    => config('knowledge_request.review_fee', 2),
             'total_budget'  => $total,
             'neighborhood'  => $data['neighborhood'],
-             'status'        => 'available',
+            'status'        => KnowledgeRequest::STATUS_PENDING_MODERATION,
             'progress'      => 0,
             'due_date'      => $data['due_date'] ?? null,
             'created_by'    => $request->user()->id,

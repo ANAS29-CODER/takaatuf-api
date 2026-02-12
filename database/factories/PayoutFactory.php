@@ -4,8 +4,8 @@ namespace Database\Factories;
 
 use App\Models\Payout;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Payout>
@@ -24,10 +24,12 @@ class PayoutFactory extends Factory
         return [
             'user_id' => User::factory(),
             'amount' => fake()->randomFloat(2, 30, 500),
-            'wallet_address' => '0x' . Str::random(40),
-            'wallet_type' => fake()->randomElement(['ethereum', 'solana', 'bitcoin']),
+            'wallet_id' => Wallet::factory(),
             'status' => Payout::STATUS_PENDING,
+            'transaction_id' => null,
             'admin_notes' => null,
+            'processed_by' => null,
+            'processed_at' => null,
             'payout_at' => null,
         ];
     }
