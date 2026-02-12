@@ -31,6 +31,7 @@ Route::middleware([
     Route::get('/oauth/{provider}/callback', [AuthController::class, 'callback'])
         ->where('provider', '(google|facebook)');
 });
+Route::post('/oauth/updateEmail', [AuthController::class, 'updateEmail']);
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -44,9 +45,11 @@ Route::get('/email/verify/{id}/{hash}',
     [VerificationController::class, 'verify']
 )->middleware(['signed'])->name('verification.verify');
 
+// Route::post('/email/resend', [VerificationController::class, 'resend'])
+//     ->middleware(['throttle:6,1'])
+//     ->name('verification.resend');
 Route::post('/email/resend', [VerificationController::class, 'resend'])
-    ->middleware(['throttle:6,1'])
-    ->name('verification.resend');
+    ->middleware(['auth:sanctum', 'throttle:6,1']);
 
 // Authenticated Routes
 Route::middleware('auth:sanctum', 'verified')->group(function () {
@@ -117,6 +120,8 @@ Route::group([
 
 // Admin
 Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+
+
 
 
   // // Admin Routes
