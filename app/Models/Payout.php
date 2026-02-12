@@ -29,6 +29,10 @@ class Payout extends Model
         'amount',
         'wallet_id',
         'status',
+        'transaction_id',
+        'admin_notes',
+        'processed_by',
+        'processed_at',
         'payout_at',
     ];
 
@@ -37,6 +41,7 @@ class Payout extends Model
         return [
             'amount' => 'decimal:2',
             'payout_at' => 'datetime',
+            'processed_at' => 'datetime',
         ];
     }
 
@@ -56,5 +61,37 @@ class Payout extends Model
     public function getWalletAddressLastFourAttribute(): string
     {
         return substr($this->wallet_id, -4);
+    }
+
+    /**
+     * Get the admin who processed this payout
+     */
+    public function processor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'processed_by');
+    }
+
+    /**
+     * Check if payout is pending
+     */
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    /**
+     * Check if payout is completed
+     */
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    /**
+     * Check if payout can be processed
+     */
+    public function canBeProcessed(): bool
+    {
+        return in_array($this->status, [self::STATUS_PENDING, self::STATUS_APPROVED]);
     }
 }
