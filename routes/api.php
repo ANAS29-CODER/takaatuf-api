@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Auth\VerificationController;
 use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
@@ -9,6 +9,7 @@ use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
 use App\Http\Controllers\API\WalletController;
 use App\Http\Controllers\API\KnowledgeProvider\KnowledgeProviderController;
+use App\Http\Controllers\API\KnowledgeProvider\TaskPageController;
 use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -33,11 +34,12 @@ Route::middleware([
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login'])  ->middleware('verified');;
+Route::post('/login', [AuthController::class, 'login']);
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
-Route::get('/email/verify/{id}/{hash}',
+Route::get(
+    '/email/verify/{id}/{hash}',
     [VerificationController::class, 'verify']
 )->middleware(['signed'])->name('verification.verify');
 
@@ -60,24 +62,37 @@ Route::group([
 
     Route::group(['middleware' => 'role:KP'], function () {
         // Knowledge Provider Dashboard
-        Route::get('/dashboard/kp', [KnowledgeProviderController::class, 'dashboard']);
-        Route::get('/dashboard/kp/earnings', [KnowledgeProviderController::class, 'earningsSummary']);
-        Route::get('/dashboard/kp/active', [KnowledgeProviderController::class, 'activeRequests']);
-        Route::get('/dashboard/kp/available', [KnowledgeProviderController::class, 'availableRequests']);
-        Route::get('/dashboard/kp/completed', [KnowledgeProviderController::class, 'completedRequests']);
+        Route::prefix('dashboard/kp')->group(function(){
+
+        Route::get('/', [KnowledgeProviderController::class, 'dashboard']);
+        Route::get('/earnings', [KnowledgeProviderController::class, 'earningsSummary']);
+        Route::get('/active-requests', [KnowledgeProviderController::class, 'activeRequests']);
+        Route::get('/available-requests', [KnowledgeProviderController::class, 'availableRequests']);
+        Route::get('/completed-requests', [KnowledgeProviderController::class, 'completedRequests']);
+        });
 
         // Knowledge Request Actions
         Route::get('/requests/{id}', [KnowledgeProviderController::class, 'showRequest']);
         Route::post('/requests/{id}/apply', [KnowledgeProviderController::class, 'applyToRequest']);
         Route::put('/requests/{id}/progress', [KnowledgeProviderController::class, 'updateProgress']);
 
+        // Task Page Routes
+        Route::prefix('task/{requestId}')->group(function () {
+            Route::get('/', [TaskPageController::class, 'show']);
+            Route::get('/status', [TaskPageController::class, 'getStatus']);
+            Route::post('/draft', [TaskPageController::class, 'saveDraft']);
+            Route::post('/media', [TaskPageController::class, 'uploadMedia']);
+            Route::delete('/media/{mediaId}', [TaskPageController::class, 'removeMedia']);
+            Route::post('/submit', [TaskPageController::class, 'submitWork']);
+        });
+
         // Wallet Management
         Route::get('/wallets', [WalletController::class, 'index']);
-        Route::post('/wallets', [WalletController::class, 'store']);
+        Route::post('/add-wallet', [WalletController::class, 'store']);
         Route::get('/wallets/{id}', [WalletController::class, 'show']);
-        Route::put('/wallets/{id}', [WalletController::class, 'update']);
-        Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
-        Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
+        Route::put('/update-wallets/{id}', [WalletController::class, 'update']);
+        Route::delete('/delete-wallets/{id}', [WalletController::class, 'destroy']);
+        Route::post('/wallet/{id}/primary', [WalletController::class, 'setPrimary']);
 
         // Payout Management
         Route::get('/payouts', [PayoutController::class, 'index']);
@@ -87,6 +102,7 @@ Route::group([
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
+
         Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
         Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
@@ -102,11 +118,45 @@ Route::group([
     });
 });
 
-// Admin
-Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
+// Admin Routes - Protected by auth and admin role middleware
+Route::group([
+    'prefix' => 'admin',
+    'middleware' => ['auth:sanctum', 'role:admin']
+], function () {
+    // Dashboard Overview
+    Route::get('/dashboard', [AdminDashboardController::class, 'dashboard']);
 
+    // Knowledge Request Moderation
+    Route::get('/requests/pending', [AdminDashboardController::class, 'pendingRequests']);
+    Route::get('/requests', [AdminDashboardController::class, 'allRequests']);
+    Route::get('/requests/{id}', [AdminDashboardController::class, 'showRequest']);
+    Route::post('/requests/{id}/kr/approve', [AdminDashboardController::class, 'approveRequest']);
+    Route::post('/requests/{id}/kr/reject', [AdminDashboardController::class, 'rejectRequest']);
 
-  // // Admin Routes
-    // Route::middleware('admin')->group(function () {
-    //     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
-    // });
+    // KP Application Management
+    Route::get('/kp-applications/pending', [AdminDashboardController::class, 'pendingKPApplications']);
+    Route::get('/requests/{requestId}/kp-applications', [AdminDashboardController::class, 'getKPApplicationsForRequest']);
+    Route::post('/kp-applications/approve', [AdminDashboardController::class, 'approveKPApplication']);
+    Route::post('/kp-applications/reject', [AdminDashboardController::class, 'rejectKPApplication']);
+
+    // Budget Management
+    // // Admin can update budget and pay per KP for a request, which creates a new budget history entry
+    Route::put('/requests/{requestId}/budget', [AdminDashboardController::class, 'updateBudget']);
+    Route::get('/requests/{requestId}/budget-history', [AdminDashboardController::class, 'getBudgetHistory']);
+
+    // Payout Management
+    Route::get('/payouts/pending', [AdminDashboardController::class, 'pendingPayouts']);
+    Route::get('/payouts', [AdminDashboardController::class, 'allPayouts']);
+    Route::get('/payouts/{id}', [AdminDashboardController::class, 'showPayout']);
+    Route::post('/payouts/{id}/complete', [AdminDashboardController::class, 'completePayout']);
+    Route::post('/payouts/{id}/fail', [AdminDashboardController::class, 'failPayout']);
+
+    // Work Submission Management
+    Route::get('/submissions/pending', [AdminDashboardController::class, 'pendingSubmissions']);
+    Route::get('/submissions/{id}', [AdminDashboardController::class, 'showSubmission']);
+    Route::post('/submissions/{id}/approve', [AdminDashboardController::class, 'approveSubmission']);
+    Route::post('/submissions/{id}/reject', [AdminDashboardController::class, 'rejectSubmission']);
+
+    // Audit Logs
+    Route::get('/audit-logs', [AdminDashboardController::class, 'auditLogs']);
+});

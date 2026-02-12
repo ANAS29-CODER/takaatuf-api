@@ -30,7 +30,7 @@ class UserKnowledgeRequest extends Pivot
     public static function getActiveStatuses(): array
     {
         return [
-            self::STATUS_PENDING,
+            // self::STATUS_PENDING,
             self::STATUS_IN_PROGRESS,
             self::STATUS_AWAITING_REVIEW,
         ];

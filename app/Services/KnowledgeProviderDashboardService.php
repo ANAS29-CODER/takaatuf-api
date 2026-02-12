@@ -31,6 +31,7 @@ class KnowledgeProviderDashboardService
         $activeRequests = $this->getActiveRequests($user);
         $availableRequests = $this->getAvailableRequests($user);
         $completedRequests = $this->getCompletedRequests($user);
+        $pendingRequests = $this->getPendingRequests($user);
 
         $hasActiveRequests = $activeRequests->isNotEmpty();
 
@@ -39,6 +40,7 @@ class KnowledgeProviderDashboardService
             'has_active_requests' => $hasActiveRequests,
             'active_requests' => $activeRequests,
             'available_requests' => $availableRequests,
+            'pending_requests' => $pendingRequests,
             'completed_requests' => [
                 'total_count' => $completedRequests->count(),
                 'items' => $completedRequests,
@@ -68,6 +70,11 @@ class KnowledgeProviderDashboardService
     public function getActiveRequests(User $user): Collection
     {
         return $this->kpRepo->getActiveRequestsForKP($user->id);
+    }
+
+    public function getPendingRequests(User $user): Collection
+    {
+        return $this->kpRepo->getPendingRequestsForKP($user->id);
     }
 
     /**
