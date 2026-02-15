@@ -45,20 +45,19 @@ Route::get('/email/verify/{id}/{hash}',
     [VerificationController::class, 'verify']
 )->middleware(['signed'])->name('verification.verify');
 
-// Route::post('/email/resend', [VerificationController::class, 'resend'])
-//     ->middleware(['throttle:6,1'])
-//     ->name('verification.resend');
 Route::post('/email/resend', [VerificationController::class, 'resend'])
-    ->middleware(['auth:sanctum', 'throttle:6,1']);
+    ->middleware(['auth:sanctum', 'throttle:6,1'])->name('verification.resend');
 
-// Authenticated Routes
-Route::middleware('auth:sanctum', 'verified')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
-    Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
-    Route::put('/profile/location', [ProfileController::class, 'updateWorkingLocation']);
+    // Authenticated Routes
+
+Route::middleware('auth:sanctum','verified')->prefix('profile')->group(function () {
+    Route::post('/complete', [ProfileController::class, 'completeProfile']);
+    Route::post('/confirm-location', [ProfileController::class, 'confirmLocation']);
+    Route::post('/payment', [ProfileController::class, 'updatePayment']);
+    Route::get('/', [ProfileController::class, 'showProfile']);
+    //   Route::post('/update', [ProfileController::class, 'updateProfile'])->name('profile.update');
+     Route::put('/location', [ProfileController::class, 'updateWorkingLocation']);
 });
-
 
 Route::group([
     'middleware' => ['auth:sanctum', 'profile.completed']
@@ -66,11 +65,14 @@ Route::group([
 
     Route::group(['middleware' => 'role:KP'], function () {
         // Knowledge Provider Dashboard
-        Route::get('/dashboard/kp', [KnowledgeProviderController::class, 'dashboard']);
-        Route::get('/dashboard/kp/earnings', [KnowledgeProviderController::class, 'earningsSummary']);
-        Route::get('/dashboard/kp/active', [KnowledgeProviderController::class, 'activeRequests']);
-        Route::get('/dashboard/kp/available', [KnowledgeProviderController::class, 'availableRequests']);
-        Route::get('/dashboard/kp/completed', [KnowledgeProviderController::class, 'completedRequests']);
+        Route::prefix('dashboard/kp')->group(function(){
+
+        Route::get('/', [KnowledgeProviderController::class, 'dashboard']);
+        Route::get('/earnings', [KnowledgeProviderController::class, 'earningsSummary']);
+        Route::get('/active-requests', [KnowledgeProviderController::class, 'activeRequests']);
+        Route::get('/available-requests', [KnowledgeProviderController::class, 'availableRequests']);
+        Route::get('/completed-requests', [KnowledgeProviderController::class, 'completedRequests']);
+        });
 
         // Knowledge Request Actions
         Route::get('/requests/{id}', [KnowledgeProviderController::class, 'showRequest']);
@@ -89,11 +91,11 @@ Route::group([
 
         // Wallet Management
         Route::get('/wallets', [WalletController::class, 'index']);
-        Route::post('/wallets', [WalletController::class, 'store']);
+        Route::post('/add-wallet', [WalletController::class, 'store']);
         Route::get('/wallets/{id}', [WalletController::class, 'show']);
-        Route::put('/wallets/{id}', [WalletController::class, 'update']);
-        Route::delete('/wallets/{id}', [WalletController::class, 'destroy']);
-        Route::post('/wallets/{id}/primary', [WalletController::class, 'setPrimary']);
+        Route::put('/update-wallets/{id}', [WalletController::class, 'update']);
+        Route::delete('/delete-wallets/{id}', [WalletController::class, 'destroy']);
+        Route::post('/wallet/{id}/primary', [WalletController::class, 'setPrimary']);
 
         // Payout Management
         Route::get('/payouts', [PayoutController::class, 'index']);
@@ -103,6 +105,7 @@ Route::group([
 
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
+
         Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
         Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
@@ -118,13 +121,3 @@ Route::group([
     });
 });
 
-// Admin
-Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
-
-
-
-
-  // // Admin Routes
-    // Route::middleware('admin')->group(function () {
-    //     Route::get('/admin/audit-logs', [AuditLogController::class, 'index']);
-    // });
