@@ -9,10 +9,13 @@ use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\VerifyEmail;
 use App\Models\User;
+use App\Repositories\SocialAccountRepository;
+use App\Repositories\UserRepository;
 use App\Services\AuthService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -22,12 +25,18 @@ use Illuminate\Support\Facades\Validator;
 class AuthController extends Controller
 {
     //
+    protected $userRepo;
+    protected $authService;
+    protected $socialRepo;
 
-    public function __construct(
-        protected AuthService $authService
-    ) {}
+    public function __construct(AuthService $authService, UserRepository $userRepo, SocialAccountRepository $socialRepo)
+    {
+        $this->authService = $authService;
+        $this->userRepo = $userRepo;
+        $this->socialRepo = $socialRepo;
+    }
 
-   /**
+    /**
      * Redirect to provider
      */
     public function redirect(Request $request, string $provider)
@@ -56,20 +65,21 @@ class AuthController extends Controller
             ->redirect();
     }
 
-    /**
-     * Provider callback
-     */
     public function callback(Request $request, string $provider)
     {
         $provider = strtolower($provider);
+
         if (!in_array($provider, ['google', 'facebook'])) {
-            return response()->json(['message' => 'Invalid provider'], 400);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid provider'
+            ], 400);
         }
 
-        // User cancelled login
         if ($request->get('error') === 'access_denied') {
             return response()->json([
-                'message' => 'Login cancelled. Please try again.'
+                'status' => 'cancelled',
+                'message' => 'Login was cancelled. Please try again.'
             ], 200);
         }
 
@@ -77,44 +87,62 @@ class AuthController extends Controller
             $driver = Socialite::driver($provider)->stateless();
 
             if ($provider === 'facebook') {
-                $driver->fields(['id', 'name', 'email']);
+                $driver->fields(['id', 'name', 'email', 'picture']);
             }
 
             $socialUser = $driver->user();
 
-            // Create / login user
             $result = $this->authService->oauthLogin($provider, $socialUser);
 
-            // Decode return URL
-            $returnUrl = '/';
-            if ($request->filled('state')) {
-                try {
-                    $returnUrl = decrypt($request->get('state'));
-                } catch (\Throwable $e) {
-                    $returnUrl = '/';
-                }
-            }
-
-            return response()->json([
-                'user' => new UserResource($result['user']),
-                'token' => $result['token'],
-                'profile_completed' => $result['profile_completed'],
-                'returnUrl' => $returnUrl,
-                'message' => $result['profile_completed']
-                    ? 'Login successful'
-                    : 'Please complete your profile before proceeding',
-            ]);
-
+            $result['return_url'] = empty($result['user']['email'])
+                ? '/update-email'
+                : '/dashboard';
+                
+            return response()->json($result);
         } catch (\Throwable $e) {
             report($e);
-
             return response()->json([
-                'message' => 'OAuth login failed.',
-                'error' => $e->getMessage(),
+                'status' => 'error',
+                'message' => 'OAuth failed',
+                'error' => $e->getMessage()
             ], 400);
         }
     }
 
+    /**
+     */
+    public function updateEmail(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'email' => 'required|email|unique:users,email',
+        ]);
+
+        return DB::transaction(function () use ($request) {
+
+            $user = $this->userRepo->getById($request->user_id);
+            $user->email = $request->email;
+
+            $user->email_verified_at = null;
+            $user->save();
+
+            $this->socialRepo->updateEmailForUser($user->id, $user->email);
+
+            $user->sendEmailVerificationNotification();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Email updated. Please check your inbox to verify your email.',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'email' => $user->email,
+                    'email_verified' => false,
+                    'profile_completed' => (bool) $user->profile_completed,
+                ],
+            ]);
+        });
+    }
     /**
      * Register
      *
@@ -137,13 +165,15 @@ class AuthController extends Controller
         $token = $user->createToken('Takaatuf App')->plainTextToken;
 
         return response()->json([
-            'user'    => $user,
+            'user'    => new UserResource($user),
+            'profile_completed' => (bool) $user->profile_completed,
             'token'   => $token,
             'message' => 'Registration successful, please verify your email.',
         ], 201);
     }
 
     // Login with email
+
     public function login(LoginRequest $request)
     {
         try {
@@ -154,11 +184,16 @@ class AuthController extends Controller
 
             return response()->json([
                 'token' => $data['token'],
-                'status' => $data['status'],
+                'status' => $data['user']->hasVerifiedEmail()
+                    ? 'verified'
+                    : 'not_verified',
                 'user' => new UserResource($data['user']),
+                'profile_completed' => (bool) $data['user']->profile_completed,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 401);
+            return response()->json([
+                'message' => 'Invalid login credentials.'
+            ], 401);
         }
     }
 
