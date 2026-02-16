@@ -29,7 +29,7 @@ class ProfileService
         try {
             $reader = new Reader(storage_path('app/geoip/GeoLite2-City.mmdb'));
             // $ip = '185.34.85.10';  // مثال على IP داخل غزة
-            // $ip= '185.34.86.15';
+            $ip= '185.34.86.15';
             //    $ip = '127.0.0.1';
             $record = $reader->city($ip);
 

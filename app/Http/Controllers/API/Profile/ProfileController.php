@@ -46,7 +46,8 @@ class ProfileController extends Controller
         if ($user->role === 'Knowledge Requester') {
             $response['paypal_account'] = $user->paypal_account;
             $response['paypal_status'] = $this->paypalService->getAccountStatus($user)['status'];
-            $response['paypal_email'] = $user->paypalAccount?->email;
+           $response['paypal_email'] = $user->paypalAccount?->paypal_email;
+
         } elseif ($user->role === User::KNOWLEDGE_PROVIDER) {
             // Get primary wallet from wallets table
             $primaryWallet = $this->walletService->getPrimaryWallet($user->id);
@@ -101,207 +102,406 @@ class ProfileController extends Controller
         return response()->json($response);
     }
 
-    public function updateProfile(Request $request)
-    {
-        try {
+    // public function updateProfile(Request $request)
+    // {
+    //     try {
 
-            /* =========================
-           1️⃣ Validation
-        ========================= */
-            $data = $request->validate([
-                'full_name'         => 'required|string',
-                'city_neighborhood' => 'required|string',
-                'wallet_type'       => 'nullable|in:ethereum,solana,bitcoin',
-                'wallet_address'    => 'nullable|string',
-                'paypal_account'    => 'nullable|email',
-                'user_confirmation' => 'nullable|in:I am in Gaza,I am outside Gaza',
+    //         /* =========================
+    //        1️⃣ Validation
+    //     ========================= */
+    //         $data = $request->validate([
+    //             'full_name'         => 'required|string',
+    //             'city_neighborhood' => 'required|string',
+    //             'wallet_type'       => 'nullable|in:ethereum,solana,bitcoin',
+    //             'wallet_address'    => 'nullable|string',
+    //             'paypal_account'    => 'nullable|email',
+    //             'user_confirmation' => 'nullable|in:I am in Gaza,I am outside Gaza',
+    //         ]);
+
+    //         $user = auth()->user();
+
+
+
+    //         /* =========================
+    //        SECURITY: Prevent role assignment from client
+    //        (Role can only be set by backend logic)
+    //     ========================= */
+    //         if ($request->input('role') !== null) {
+    //             return response()->json([
+    //                 'message' => 'You are not allowed to assign or change your role.'
+    //             ], 403);
+    //         }
+    //         // Extra safety: ensure role is never mass-assigned
+
+    //         unset($data['role']);
+
+    //         /* =========================
+    //        2️⃣ Temporarily store wallet inputs
+    //        (Wallet is stored in a separate table)
+    //     ========================= */
+    //         $walletType    = $data['wallet_type'] ?? null;
+    //         $walletAddress = $data['wallet_address'] ?? null;
+
+
+    //         /* =========================
+    //        3️⃣ Detect if city is set for the first time or changed
+    //     ========================= */
+    //         $cityChanged = is_null($user->city_neighborhood)
+    //             || $user->city_neighborhood !== $data['city_neighborhood'];
+
+    //         $role     = $user->role;
+    //         $category = null;
+    //         $location = null;
+
+
+    //         /* =========================
+    //        4️⃣ IP-based geolocation check
+    //        (Only when city changes)
+    //     ========================= */
+    //         if ($cityChanged) {
+
+    //             $locationCheck = $this->profileService->checkLocationMatch(
+    //                 $data['city_neighborhood'],
+    //                 $request->ip()
+    //             );
+
+    //             $category     = $locationCheck['category']; // Match | Mismatch | Unknown
+    //             $location     = $locationCheck['location'] ?? null;
+    //             $detectedRole = $locationCheck['role'] ?? null;
+
+    //             // High confidence → auto assign role
+    //             if ($category === 'Match' && $detectedRole) {
+    //                 $role = $detectedRole;
+    //             }
+    //             // Low confidence or unknown → require confirmation
+    //             if (in_array($category, ['Mismatch', 'Unknown'])) {
+
+    //                 if (empty($data['user_confirmation'])) {
+    //                     return response()->json([
+    //                         'message' => 'We detected your location approximately. Please confirm your location.',
+    //                         'category' => $category,
+    //                         'possible_roles' => [
+    //                             'I am in Gaza',
+    //                             'I am outside Gaza'
+    //                         ],
+    //                     ], 200);
+    //                 }
+
+    //                 $role = $data['user_confirmation'] === 'I am in Gaza'
+    //                     ? 'Knowledge Provider'
+    //                     : 'Knowledge Requester';
+    //             }
+
+    //             // Role is assigned ONLY by backend logic
+
+    //             $data['role'] = $role;
+    //         }
+
+
+
+
+    //         /* =========================
+    //        5️⃣ Role-based requirements
+    //     ========================= */
+
+    //         if ($role === 'Knowledge Provider') {
+    //             if (empty($walletType) || empty($walletAddress)) {
+    //                 return response()->json([
+    //                     'message' => 'Wallet information is required for Knowledge Providers.'
+    //                 ], 400);
+    //             }
+    //             // Knowledge Providers do not use PayPal
+    //             $data['paypal_account'] = null;
+    //         }
+
+    //         if ($role === 'Knowledge Requester') {
+    //             if (empty($data['paypal_account'])) {
+    //                 return response()->json([
+    //                     'message' => 'PayPal account is required for Knowledge Requesters.'
+    //                 ], 400);
+    //             }
+    //         }
+
+    //         /* =========================
+    //        6️⃣ Update USERS table
+    //        (Profile core data only)
+    //     ========================= */
+    //         unset($data['wallet_type'], $data['wallet_address']);
+    //         $user->update($data);
+    //         /* =========================
+    //        7️⃣ Audit log (only when city changes)
+    //     ========================= */
+    //         if ($cityChanged) {
+    //             AuditLog::create([
+    //                 'user_id'           => $user->id,
+    //                 'location_category' => $category,
+    //                 'location'          => $location['region'] ?? $location['country'] ?? 'Unknown',
+    //                 'user_confirmation' => $data['user_confirmation'] ?? null,
+    //             ]);
+    //         }
+
+    //         /* =========================
+    //        9️⃣ Compute profile completion
+    //     ========================= */
+    //         if ($role === 'Knowledge Provider') {
+
+    //             $validation = $this->walletService->validateWalletAddress(
+    //                 $walletType,
+    //                 $walletAddress
+    //             );
+
+    //             if (!$validation['valid']) {
+    //                 return response()->json([
+    //                     'message' => $validation['message']
+    //                 ], 422);
+    //             }
+
+    //             $this->walletService->addWallet(
+    //                 $user->id,
+    //                 $walletType,
+    //                 $walletAddress,
+    //                 true
+    //             );
+    //         }
+
+    //         /* =========================
+    //        9️⃣ Compute profile completion
+    //     ========================= */
+    //         $user->profile_completed =
+    //             $this->profileService->isProfileCompleted($user);
+    //         $user->save();
+
+    //         /* =========================
+    //        🔟 Response
+    //     ========================= */
+    //         $response = [
+    //             'message' => 'Profile updated successfully.',
+    //             'role' => $user->role,
+    //             'profile_completed' => $user->profile_completed,
+    //         ];
+
+    //         if ($user->role === 'Knowledge Requester') {
+    //             $response['paypal_account'] = $user->paypal_account;
+    //         }
+
+    //         if ($user->role === User::KNOWLEDGE_PROVIDER) {
+    //             $wallet = $this->walletService->getPrimaryWallet($user->id);
+    //             $response['primary_wallet'] = $wallet
+    //                 ? new WalletResource($wallet)
+    //                 : null;
+    //         }
+
+    //         return response()->json($response);
+    //     } catch (\Throwable $e) {
+
+    //         report($e);
+
+    //         return response()->json([
+    //             'error' => 'Failed to update profile.',
+    //             'details' => config('app.debug') ? $e->getMessage() : null,
+    //         ], 500);
+    //     }
+    // }
+
+
+   public function completeProfile(Request $request)
+{
+    $user = auth()->user();
+
+    $data = $request->validate([
+        'full_name' => 'required|string|max:255',
+        'city_neighborhood' => 'required|string|max:255',
+        'user_confirmation' => 'nullable|string'
+    ]);
+
+    // فحص الموقع
+    $locationCheck = $this->profileService->checkLocationMatch(
+        $data['city_neighborhood'],
+        $request->ip()
+    );
+
+    $category = $locationCheck['category']; // Match | Mismatch | Unknown
+    $detectedRole = $locationCheck['role'] ?? null;
+    $location = $locationCheck['location'] ?? null;
+
+    $role = null;
+
+    if ($category === 'Match' && $detectedRole) {
+        $role = $detectedRole;
+    } elseif (in_array($category, ['Mismatch', 'Unknown'])) {
+
+        if (empty($data['user_confirmation'])) {
+
+            AuditLog::create([
+                'user_id' => $user->id,
+                'location_category' => $category,
+                'location' => $location['region'] ?? $location['country'] ?? 'Unknown',
+                'user_confirmation' => null,
             ]);
 
-            $user = auth()->user();
-
-
-
-            /* =========================
-           SECURITY: Prevent role assignment from client
-           (Role can only be set by backend logic)
-        ========================= */
-            if ($request->input('role') !== null) {
-                return response()->json([
-                    'message' => 'You are not allowed to assign or change your role.'
-                ], 403);
-            }
-            // Extra safety: ensure role is never mass-assigned
-
-            unset($data['role']);
-
-            /* =========================
-           2️⃣ Temporarily store wallet inputs
-           (Wallet is stored in a separate table)
-        ========================= */
-            $walletType    = $data['wallet_type'] ?? null;
-            $walletAddress = $data['wallet_address'] ?? null;
-
-
-            /* =========================
-           3️⃣ Detect if city is set for the first time or changed
-        ========================= */
-            $cityChanged = is_null($user->city_neighborhood)
-                || $user->city_neighborhood !== $data['city_neighborhood'];
-
-            $role     = $user->role;
-            $category = null;
-            $location = null;
-
-
-            /* =========================
-           4️⃣ IP-based geolocation check
-           (Only when city changes)
-        ========================= */
-            if ($cityChanged) {
-
-                $locationCheck = $this->profileService->checkLocationMatch(
-                    $data['city_neighborhood'],
-                    $request->ip()
-                );
-
-                $category     = $locationCheck['category']; // Match | Mismatch | Unknown
-                $location     = $locationCheck['location'] ?? null;
-                $detectedRole = $locationCheck['role'] ?? null;
-
-                // High confidence → auto assign role
-                if ($category === 'Match' && $detectedRole) {
-                    $role = $detectedRole;
-                }
-                // Low confidence or unknown → require confirmation
-                if (in_array($category, ['Mismatch', 'Unknown'])) {
-
-                    if (empty($data['user_confirmation'])) {
-                        return response()->json([
-                            'message' => 'We detected your location approximately. Please confirm your location.',
-                            'category' => $category,
-                            'possible_roles' => [
-                                'I am in Gaza',
-                                'I am outside Gaza'
-                            ],
-                        ], 200);
-                    }
-
-                    $role = $data['user_confirmation'] === 'I am in Gaza'
-                        ? 'Knowledge Provider'
-                        : 'Knowledge Requester';
-                }
-
-                // Role is assigned ONLY by backend logic
-
-                $data['role'] = $role;
-            }
-
-
-
-
-            /* =========================
-           5️⃣ Role-based requirements
-        ========================= */
-
-            if ($role === 'Knowledge Provider') {
-                if (empty($walletType) || empty($walletAddress)) {
-                    return response()->json([
-                        'message' => 'Wallet information is required for Knowledge Providers.'
-                    ], 400);
-                }
-                // Knowledge Providers do not use PayPal
-                $data['paypal_account'] = null;
-            }
-
-            if ($role === 'Knowledge Requester') {
-                if (empty($data['paypal_account'])) {
-                    return response()->json([
-                        'message' => 'PayPal account is required for Knowledge Requesters.'
-                    ], 400);
-                }
-            }
-
-            /* =========================
-           6️⃣ Update USERS table
-           (Profile core data only)
-        ========================= */
-            unset($data['wallet_type'], $data['wallet_address']);
-            $user->update($data);
-            /* =========================
-           7️⃣ Audit log (only when city changes)
-        ========================= */
-            if ($cityChanged) {
-                AuditLog::create([
-                    'user_id'           => $user->id,
-                    'location_category' => $category,
-                    'location'          => $location['region'] ?? $location['country'] ?? 'Unknown',
-                    'user_confirmation' => $data['user_confirmation'] ?? null,
-                ]);
-            }
-
-            /* =========================
-           9️⃣ Compute profile completion
-        ========================= */
-            if ($role === 'Knowledge Provider') {
-
-                $validation = $this->walletService->validateWalletAddress(
-                    $walletType,
-                    $walletAddress
-                );
-
-                if (!$validation['valid']) {
-                    return response()->json([
-                        'message' => $validation['message']
-                    ], 422);
-                }
-
-                $this->walletService->addWallet(
-                    $user->id,
-                    $walletType,
-                    $walletAddress,
-                    true
-                );
-            }
-
-            /* =========================
-           9️⃣ Compute profile completion
-        ========================= */
-            $user->profile_completed =
-                $this->profileService->isProfileCompleted($user);
-            $user->save();
-
-            /* =========================
-           🔟 Response
-        ========================= */
-            $response = [
-                'message' => 'Profile updated successfully.',
-                'role' => $user->role,
-                'profile_completed' => $user->profile_completed,
-            ];
-
-            if ($user->role === 'Knowledge Requester') {
-                $response['paypal_account'] = $user->paypal_account;
-            }
-
-            if ($user->role === User::KNOWLEDGE_PROVIDER) {
-                $wallet = $this->walletService->getPrimaryWallet($user->id);
-                $response['primary_wallet'] = $wallet
-                    ? new WalletResource($wallet)
-                    : null;
-            }
-
-            return response()->json($response);
-        } catch (\Throwable $e) {
-
-            report($e);
-
             return response()->json([
-                'error' => 'Failed to update profile.',
-                'details' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
+                'message' => 'Please confirm your location.',
+                'status' => $category,
+                'possible_roles' => [
+                    'I am in Gaza',
+                    'I am outside Gaza'
+                ],
+                'id' => $user->id,
+                'email_verified' => $user->hasVerifiedEmail(),
+                'role' => $user->role,
+                'city' => $user->city_neighborhood,
+                 'name' => $user->full_name,
+                 'profile_completed' => false,
+            ], 200);
         }
+
+        $role = $data['user_confirmation'] === 'I am in Gaza'
+            ? 'Knowledge Provider'
+            : 'Knowledge Requester';
     }
 
+    $user->update([
+        'full_name' => $data['full_name'],
+        'city_neighborhood' => $data['city_neighborhood'],
+        'role' => $role,
+        'profile_completed' => true,
+    ]);
+
+    AuditLog::create([
+        'user_id' => $user->id,
+        'location_category' => $category,
+        'location' => $location['region'] ?? $location['country'] ?? 'Unknown',
+        'user_confirmation' => $data['user_confirmation'] ?? null,
+    ]);
+
+    return response()->json([
+        'message' => 'Profile updated successfully.',
+        'status' => $category,
+        'id' => $user->id,
+        'name' => $user->full_name,
+        'email' => $user->email,
+        'email_verified' => $user->hasVerifiedEmail(),
+        'role' => $user->role,
+        'city' => $user->city_neighborhood,
+        'profile_completed' => false,
+    ], 200);
+}
+
+public function confirmLocation(Request $request)
+{
+    $data = $request->validate([
+        'user_confirmation' => 'required|in:I am in Gaza,I am outside Gaza',
+    ]);
+
+    $user = auth()->user();
+
+    $role = $data['user_confirmation'] === 'I am in Gaza'
+        ? 'Knowledge Provider'
+        : 'Knowledge Requester';
+
+    $user->update([
+        'role' => $role
+    ]);
+
+    $audit = AuditLog::where('user_id', $user->id)
+    ->whereNull('user_confirmation')
+    ->latest()
+    ->first();
+
+    if ($audit) {
+        $audit->update([
+            'user_confirmation' => $data['user_confirmation'],
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Location confirmed.',
+        'id' => $user->id,
+        'full_name' => $user->full_name,
+        'email' => $user->email,
+        'email_verified' => $user->hasVerifiedEmail(),
+        'role' => $user->role,
+        'city_neighborhood' => $user->city_neighborhood,
+        'profile_completed' => false,
+    ], 200);
+}
+
+public function updatePayment(Request $request)
+{
+    $user = auth()->user();
+
+    if ($user->role === 'Knowledge Requester') {
+        $data = $request->validate([
+            'paypal_email' => 'required|email'
+        ]);
+
+
+        $paypal = $user->paypalAccount;
+        if ($paypal) {
+            $paypal->update([
+                'paypal_email' => $data['paypal_email'],
+                'is_primary' => true
+            ]);
+        } else {
+            $user->paypalAccount()->create([
+                'paypal_email' => $data['paypal_email'],
+                'is_primary' => true
+            ]);
+        }
+
+          $user->update([
+        'profile_completed' => true
+    ]);
+
+        return response()->json([
+            'message' => 'PayPal email saved successfully.',
+               'id' => $user->id,
+                'role' => $user->role,
+            'profile_completed' => true
+        ]);
+    }
+
+    if ($user->role === 'Knowledge Provider') {
+        $data = $request->validate([
+            'wallet_type' => 'required|in:ethereum,solana,bitcoin',
+            'wallet_address' => 'required|string',
+        ]);
+
+        // تحقق من صحة المحفظة (لو عندك service لذلك)
+        $validation = $this->walletService->validateWalletAddress(
+            $data['wallet_type'],
+            $data['wallet_address']
+        );
+
+        if (!$validation['valid']) {
+            return response()->json([
+                'message' => $validation['message']
+            ], 422);
+        }
+
+        $this->walletService->addWallet(
+            $user->id,
+            $data['wallet_type'],
+            $data['wallet_address'],
+            true
+        );
+
+          $user->update([
+        'profile_completed' => true
+    ]);
+
+        return response()->json([
+            'message' => 'Wallet saved successfully.',
+               'id' => $user->id,
+                 'role' => $user->role,
+            'profile_completed' => true
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Invalid role for payment/wallet'
+    ], 403);
+}
 
     public function updateWorkingLocation(UpdateWorkingLocationRequest $request)
     {

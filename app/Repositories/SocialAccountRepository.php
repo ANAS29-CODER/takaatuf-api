@@ -25,5 +25,12 @@ class SocialAccountRepository
             ['user_id' => $userId, 'email' => $email, 'raw' => $raw]
         );
     }
+
+    public function updateEmailForUser(int $userId, string $email)
+{
+    return SocialAccount::where('user_id', $userId)
+        ->update(['email' => $email]);
+}
+
 }
 ?>
