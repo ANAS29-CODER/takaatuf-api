@@ -32,6 +32,7 @@ public function getActiveRequests($user)
         ->get();
 }
 
+
    public function getCompletedRequests($user)
 {
     return KnowledgeRequest::where('user_id', $user->id)
