@@ -136,10 +136,19 @@ class TaskPageService
         try {
             $submission = $this->submissionRepo->saveDraft($user->id, $requestId, $textContent);
 
-            // Update assignment status to in_progress if pending
             $assignment = $this->kpRepo->getAssignment($user->id, $requestId);
-            if ($assignment && $assignment->status === UserKnowledgeRequest::STATUS_PENDING) {
-                $this->kpRepo->updateAssignmentStatus($user->id, $requestId, UserKnowledgeRequest::STATUS_IN_PROGRESS);
+
+            if ($assignment && in_array($assignment->status, [
+                UserKnowledgeRequest::STATUS_PENDING,
+                UserKnowledgeRequest::STATUS_IN_PROGRESS,
+                UserKnowledgeRequest::STATUS_REJECTED,
+            ])) {
+
+                $assignment->progress = UserKnowledgeRequest::PROGRESS_DRAFT;
+                $assignment->status = UserKnowledgeRequest::STATUS_IN_PROGRESS;
+                $assignment->save();
+
+                $this->kpRepo->recalculateRequestProgress($requestId);
             }
 
             return [
@@ -184,10 +193,17 @@ class TaskPageService
             }
         }
 
-        // Update assignment status to in_progress if pending
+        // Update progress to 50%
         $assignment = $this->kpRepo->getAssignment($user->id, $requestId);
-        if ($assignment && $assignment->status === UserKnowledgeRequest::STATUS_PENDING) {
-            $this->kpRepo->updateAssignmentStatus($user->id, $requestId, UserKnowledgeRequest::STATUS_IN_PROGRESS);
+        if ($assignment && in_array($assignment->status, [
+            UserKnowledgeRequest::STATUS_PENDING,
+            UserKnowledgeRequest::STATUS_IN_PROGRESS,
+            UserKnowledgeRequest::STATUS_REJECTED,
+        ])) {
+            $assignment->progress = UserKnowledgeRequest::PROGRESS_DRAFT;
+            $assignment->status = UserKnowledgeRequest::STATUS_IN_PROGRESS;
+            $assignment->save();
+            $this->kpRepo->recalculateRequestProgress($assignment->knowledge_request_id);
         }
 
         return [
@@ -308,8 +324,21 @@ class TaskPageService
             // Submit the work
             $submission = $this->submissionRepo->submitWork($user->id, $requestId);
 
-            // Update assignment status and progress
-            $this->kpRepo->updateProgress($user->id, $requestId, 100, UserKnowledgeRequest::STATUS_AWAITING_REVIEW);
+            // Update assignment progress to 90% (submitted, awaiting review)
+
+
+            $assignment = UserKnowledgeRequest::where('user_id', $user->id)
+                ->where('knowledge_request_id', $requestId)
+                ->first();
+
+            if ($assignment) {
+                $assignment->progress = UserKnowledgeRequest::PROGRESS_SUBMITTED;
+                $assignment->status = UserKnowledgeRequest::STATUS_AWAITING_REVIEW;
+                $assignment->save();
+            }
+
+
+            $this->kpRepo->recalculateRequestProgress($requestId);
 
             DB::commit();
 
@@ -338,7 +367,7 @@ class TaskPageService
 
             $submission = $this->submissionRepo->approveSubmission($submissionId);
 
-            // Update assignment status
+            // Update assignment status to approved (progress set to 100% automatically)
             $this->kpRepo->updateAssignmentStatus($userId, $requestId, UserKnowledgeRequest::STATUS_APPROVED);
 
             // Create earning record
@@ -350,6 +379,11 @@ class TaskPageService
                     'Payment for completed request #' . $requestId
                 );
             }
+
+            $assignment->progress = UserKnowledgeRequest::PROGRESS_REVIEWED;
+            $assignment->save();
+            // Recalculate overall request progress for KR visibility
+            $this->kpRepo->recalculateRequestProgress($requestId);
 
             DB::commit();
 
@@ -377,8 +411,10 @@ class TaskPageService
 
             $submission = $this->submissionRepo->rejectSubmission($submissionId, $reason);
 
-            // Update assignment status
+            // Update assignment status to rejected (progress set to 100% automatically)
             $this->kpRepo->updateAssignmentStatus($userId, $requestId, UserKnowledgeRequest::STATUS_REJECTED);
+            // Recalculate overall request progress for KR visibility
+            $this->kpRepo->recalculateRequestProgress($requestId);
 
             DB::commit();
 

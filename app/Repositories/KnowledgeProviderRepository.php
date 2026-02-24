@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\KnowledgeRequest;
+use App\Models\User;
 use App\Models\UserKnowledgeRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -167,7 +168,6 @@ class KnowledgeProviderRepository
             $updateData['status'] = $status;
         }
 
-        // If progress is 100, mark as awaiting review
         if ($progress >= 100 && !$status) {
             $updateData['status'] = UserKnowledgeRequest::STATUS_AWAITING_REVIEW;
         }
@@ -208,10 +208,9 @@ class KnowledgeProviderRepository
     /**
      * Get assignment details
      */
-    public function getAssignment(int $userId, int $requestId): ?object
+    public function getAssignment(int $userId, int $requestId): ?UserKnowledgeRequest
     {
-        return DB::table('user_knowledge_request')
-            ->where('user_id', $userId)
+        return UserKnowledgeRequest::where('user_id', $userId)
             ->where('knowledge_request_id', $requestId)
             ->first();
     }
@@ -264,10 +263,15 @@ class KnowledgeProviderRepository
             'updated_at' => now(),
         ];
 
-        if ($status === UserKnowledgeRequest::STATUS_COMPLETED || $status === UserKnowledgeRequest::STATUS_APPROVED) {
+        if (in_array($status, [
+            UserKnowledgeRequest::STATUS_COMPLETED,
+            UserKnowledgeRequest::STATUS_APPROVED,
+        ])) {
+            $updateData['progress'] = UserKnowledgeRequest::PROGRESS_REVIEWED;
             $updateData['completed_at'] = now();
-            $updateData['progress'] = 100;
         }
+
+
 
         return DB::table('user_knowledge_request')
             ->where('user_id', $userId)
@@ -306,5 +310,35 @@ class KnowledgeProviderRepository
         ];
 
         return $labels[$status] ?? ucfirst(str_replace('_', ' ', $status));
+    }
+
+
+    // Calculate the progress for KR request
+    public function recalculateRequestProgress(int $requestId): void
+    {
+        $request = KnowledgeRequest::find($requestId);
+        if (!$request) {
+            return;
+        }
+
+        $sumProgress = UserKnowledgeRequest::query()
+            ->where('knowledge_request_id', $requestId)
+            ->where('progress', '>', 0)
+            ->sum('progress');
+
+        $totalSlots = $request->number_of_kps;
+
+        $requestProgress = $totalSlots > 0
+            ? (int) round($sumProgress / $totalSlots)
+            : 0;
+
+        $requestProgress = min(100, $requestProgress);
+
+        $request->update([
+            'progress' => $requestProgress,
+            'status'   => $requestProgress >= 100
+                ? KnowledgeRequest::STATUS_COMPLETED
+                : $request->status,
+        ]);
     }
 }

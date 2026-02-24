@@ -15,6 +15,11 @@ class UserKnowledgeRequest extends Pivot
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
 
+    const PROGRESS_ASSIGNED = 25;
+    const PROGRESS_DRAFT = 50;
+    const PROGRESS_SUBMITTED = 90;
+    const PROGRESS_REVIEWED = 100;
+
     public static function getStatuses(): array
     {
         return [

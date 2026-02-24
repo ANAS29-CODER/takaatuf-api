@@ -10,6 +10,7 @@ use App\Models\UserKnowledgeRequest;
 use App\Models\WorkSubmission;
 use App\Repositories\AdminRepository;
 use App\Repositories\EarningRepository;
+use App\Repositories\KnowledgeProviderRepository;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -21,17 +22,20 @@ class AdminService
     protected AuditLogService $auditLogService;
     protected TaskPageService $taskPageService;
     protected EarningRepository $earningRepo;
+    protected KnowledgeProviderRepository $kpRepo;
 
     public function __construct(
         AdminRepository $adminRepo,
         AuditLogService $auditLogService,
         TaskPageService $taskPageService,
-        EarningRepository $earningRepo
+        EarningRepository $earningRepo,
+        KnowledgeProviderRepository $kpRepo
     ) {
         $this->adminRepo = $adminRepo;
         $this->auditLogService = $auditLogService;
         $this->taskPageService = $taskPageService;
         $this->earningRepo = $earningRepo;
+        $this->kpRepo = $kpRepo;
     }
 
     /**
@@ -179,8 +183,8 @@ class AdminService
             $assignment = $this->adminRepo->updateKPApplicationStatus($userId, $requestId, UserKnowledgeRequest::STATUS_IN_PROGRESS);
             $newValues = ['status' => $assignment->status];
 
-            // Set payout amount
             $assignment->payout_amount = $request->pay_per_kp;
+            $assignment->progress = UserKnowledgeRequest::PROGRESS_ASSIGNED;
             $assignment->save();
 
             // Update request status to active if it was available
@@ -189,6 +193,8 @@ class AdminService
                 $request->save();
             }
 
+            // Recalculate overall request progress for KR visibility
+            $this->kpRepo->recalculateRequestProgress($requestId);
 
             $this->auditLogService->logKPApproval($assignment->id, $oldValues, $newValues, $httpRequest);
 
