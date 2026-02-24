@@ -22,13 +22,11 @@ class ProfileService
     {
         return $this->userRepo->update($userId, $data);
     }
-
-
     public function getGeolocation($ip)
     {
         try {
             $reader = new Reader(storage_path('app/geoip/GeoLite2-City.mmdb'));
-            // $ip = '185.34.85.10';  // مثال على IP داخل غزة
+            $ip = '127.0.0.1';  // مثال على IP داخل غزة
             // $ip= '185.34.86.15';
             //    $ip = '127.0.0.1';
             $record = $reader->city($ip);
@@ -49,57 +47,76 @@ class ProfileService
         }
     }
 
-
-
     /**
      *compare IP-derived region with the city
      */
 
-    public function checkLocationMatch($userCity, $ip)
-    {
-        $location = $this->getGeolocation($ip);
+public function checkLocationMatch(string $userInputCity, string $ip)
+{
+    $geoData = $this->getGeolocation($ip);
 
-        if ($location['category'] === 'Unknown') {
-            return [
-                'category' => 'Unknown',
-                'role' => null,
-                'location' => null,
-                'message' => $location['message'] ?? 'Unable to retrieve location data. Please check the IP or confirm your location manually.'
-            ];
-        }
+    $country = $geoData['country'] ?? null;
+    $region = $geoData['region'] ?? null;
+    $city = $geoData['city'] ?? null;
 
-        $ipRegion = strtolower($location['region']);
-        $userCity = strtolower($userCity);
+    $location = [
+        'country' => $country,
+        'region' => $region,
+        'city' => $city
+    ];
 
-        if ($ipRegion !== $userCity) {
-            return [
-                'category' => 'Mismatch',
-                'role' => null,
-                'location' => $location,
-                'message' => 'Your location does not match the entered city. Please confirm your location.'
-            ];
-        }
-
-        $role = ($userCity === 'Gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
-        return [
-            'category' => 'Match',
-            'role' => $role,
-            'location' => $location,
-            'message' => 'Location matched successfully.'
-        ];
+    if ($city && strtolower($userInputCity) === strtolower($city)) {
+        $category = 'Match';
+        $role = ($userInputCity === 'Gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
+    } elseif ($city && strtolower($userInputCity) !== strtolower($city)) {
+        $category = 'Mismatch';
+        $role = null;
+    } else {
+        $category = 'Unknown';
+        $role = null;
     }
 
+    return [
+        'category' => $category,
+        'role' => $role,
+        'location' => $location
+    ];
+}
 
-    public function storeAuditLog($userId, $category, $location, $userConfirmation = null)
-    {
-        AuditLog::create([
-            'user_id' => $userId,
-            'location_category' => $category,
-            'location' => json_encode($location),
-            'user_confirmation' => $userConfirmation,
-            'created_at' => now(),
-        ]);
-    }
+    // public function storeAuditLog($userId, $category, $location, $userConfirmation = null)
+    // {
+    //     AuditLog::create([
+    //         'user_id' => $userId,
+    //         'location_category' => $category,
+    //         'location' => json_encode($location),
+    //         'user_confirmation' => $userConfirmation,
+    //         'created_at' => now(),
+    //     ]);
+    // }
+
+  public function storeAuditLog(
+    int $userId,
+    string $category,
+    $location = null,
+    string $action,
+    $userConfirmation = null
+) {
+    AuditLog::create([
+        'user_id' => $userId,
+        'action' => $action,
+        'model_type' => null,
+        'model_id' => null,
+        'location_category' => $category, // Match | Mismatch | Unknown
+        'location' => $location ? json_encode($location) : null,
+        'user_confirmation' => $userConfirmation,
+        'ip_address' => request()->ip(),
+        'user_agent' => request()->userAgent(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
+
 
     public function validateWalletAddress(string $type, string $address): array
     {

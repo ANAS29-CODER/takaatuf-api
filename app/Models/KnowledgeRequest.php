@@ -190,4 +190,14 @@ class KnowledgeRequest extends Model
     {
         return $this->status === self::STATUS_REJECTED;
     }
+
+    public function scopeActiveForKr($query)
+{
+    return $query->whereIn('status', [
+        self::STATUS_AVAILABLE,
+        self::STATUS_ACTIVE
+    ]);
+}
+
+
 }

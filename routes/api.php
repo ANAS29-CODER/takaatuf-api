@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Auth\VerificationController;
-use App\Http\Controllers\API\KnowldgeRequest\KnowledgeRequestController;
+use App\Http\Controllers\API\KnowldgeRequester\KnowledgeRequestController;
 use App\Http\Controllers\API\PayoutController;
 use App\Http\Controllers\API\PayPalController;
 use App\Http\Controllers\API\Profile\ProfileController;
@@ -13,7 +13,6 @@ use App\Http\Controllers\API\KnowledgeProvider\TaskPageController;
 use App\Http\Controllers\Payment\PaymentController;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
@@ -31,30 +30,34 @@ Route::middleware([
     Route::get('/oauth/{provider}/callback', [AuthController::class, 'callback'])
         ->where('provider', '(google|facebook)');
 });
+Route::post('/oauth/updateEmail', [AuthController::class, 'updateEmail'])
+    ->middleware('auth:sanctum');;
 
 // Public Auth Routes
 Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/login', [AuthController::class, 'login']);
+
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
-Route::get(
-    '/email/verify/{id}/{hash}',
+Route::get('/email/verify/{id}/{hash}',
     [VerificationController::class, 'verify']
 )->middleware(['signed'])->name('verification.verify');
 
 Route::post('/email/resend', [VerificationController::class, 'resend'])
-    ->middleware(['auth:sanctum', 'throttle:6,1'])
-    ->name('verification.resend');
+    ->middleware(['auth:sanctum', 'throttle:6,1'])->name('verification.resend');
 
-// Authenticated Routes
-Route::middleware('auth:sanctum', 'verified')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/profile', [ProfileController::class, 'showProfile'])->name('profile.show');
-    Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.edit');
-    Route::put('/profile/location', [ProfileController::class, 'updateWorkingLocation']);
+    // Authenticated Routes
+
+Route::middleware('auth:sanctum','verified')->prefix('profile')->group(function () {
+    Route::get('/', [ProfileController::class, 'showProfile']);
+    Route::post('/complete', [ProfileController::class, 'completeProfile']);
+    Route::post('/confirm-location', [ProfileController::class, 'confirmLocation']);
+    Route::post('/payment', [ProfileController::class, 'updatePayment']);
+      Route::post('/update', [ProfileController::class, 'updateProfile'])->name('profile.update');
+     Route::put('/location', [ProfileController::class, 'updateWorkingLocation']);
 });
-
 
 Route::group([
     'middleware' => ['auth:sanctum', 'profile.completed']
@@ -103,10 +106,11 @@ Route::group([
     // Knowledge Requester (KR) routes
     Route::group(['middleware' => 'role:KR'], function () {
 
-        Route::post('/kr/create', [KnowledgeRequestController::class, 'store']);
-        Route::get('/dashboard/kr', [KnowledgeRequestController::class, 'index']);
+        Route::prefix('dashboard/kr')->group(function(){
+     Route::get('/', [KnowledgeRequestController::class, 'index']);
+     Route::post('/submit-request ', [KnowledgeRequestController::class, 'store']);
         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
-
+});
         // PayPal routes for Knowledge Requester
         Route::prefix('paypal')->group(function () {
             Route::get('/status', [PayPalController::class, 'status']);
@@ -117,6 +121,7 @@ Route::group([
         });
     });
 });
+
 
 // Admin Routes - Protected by auth and admin role middleware
 Route::group([
@@ -160,3 +165,5 @@ Route::group([
     // Audit Logs
     Route::get('/audit-logs', [AdminDashboardController::class, 'auditLogs']);
 });
+
+
