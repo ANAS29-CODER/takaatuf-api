@@ -7,11 +7,11 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\OAuthLoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\VerifyEmail;
 use App\Models\User;
 use App\Repositories\SocialAccountRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -64,35 +64,53 @@ class AuthController extends Controller
             ->redirect();
     }
 
-     public function callback(Request $request, string $provider)
-{
+    public function callback(Request $request, string $provider)
+    {
+        $provider = strtolower($provider);
+
     $provider = strtolower($provider);
 
-    if (!in_array($provider, ['google', 'facebook'])) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Invalid provider'
-        ], 400);
-    }
-
-    if ($request->get('error') === 'access_denied') {
-        return response()->json([
-            'status' => 'cancelled',
-            'message' => 'Login was cancelled. Please try again.'
-        ], 200);
-    }
-
-    try {
-        $driver = Socialite::driver($provider)->stateless();
-
-        if ($provider === 'facebook') {
-            $driver->fields(['id', 'name', 'email', 'picture']);
+        if (!in_array($provider, ['google', 'facebook'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid provider'
+            ], 400);
         }
 
-        $socialUser = $driver->user();
 
+        if ($request->get('error') === 'access_denied') {
+            return response()->json([
+                'status' => 'cancelled',
+                'message' => 'Login was cancelled. Please try again.'
+            ], 200);
+        }
+
+
+        try {
+            $driver = Socialite::driver($provider)->stateless();
+
+            if ($provider === 'facebook') {
+                $driver->fields(['id', 'name', 'email', 'picture']);
+            }
+
+
+            $socialUser = $driver->user();
+
+            $result = $this->authService->oauthLogin($provider, $socialUser);
         $result = $this->authService->oauthLogin($provider, $socialUser);
 
+            $result['return_url'] = empty($result['user']['email'])
+                ? '/update-email'
+                : '/dashboard';
+
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'OAuth failed',
+                'error' => $e->getMessage()
+            ], 400);
       $user = User::find($result['user']['id']);
         if ($user) {
             $user->email_verified_at = now();
@@ -116,7 +134,8 @@ class AuthController extends Controller
     /**
      */
 
-    public function updateEmail(Request $request)
+
+        public function updateEmail(Request $request)
 {
     $user = $request->user();
 
@@ -147,6 +166,7 @@ class AuthController extends Controller
         ]);
     });
 }
+
     /**
      * Register
      *
@@ -208,3 +228,6 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 }
+
+
+
