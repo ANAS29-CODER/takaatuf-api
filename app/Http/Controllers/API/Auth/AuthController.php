@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Repositories\SocialAccountRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -69,12 +68,15 @@ class AuthController extends Controller
     {
         $provider = strtolower($provider);
 
+    $provider = strtolower($provider);
+
         if (!in_array($provider, ['google', 'facebook'])) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid provider'
             ], 400);
         }
+
 
         if ($request->get('error') === 'access_denied') {
             return response()->json([
@@ -83,6 +85,7 @@ class AuthController extends Controller
             ], 200);
         }
 
+
         try {
             $driver = Socialite::driver($provider)->stateless();
 
@@ -90,14 +93,16 @@ class AuthController extends Controller
                 $driver->fields(['id', 'name', 'email', 'picture']);
             }
 
+
             $socialUser = $driver->user();
 
             $result = $this->authService->oauthLogin($provider, $socialUser);
+        $result = $this->authService->oauthLogin($provider, $socialUser);
 
             $result['return_url'] = empty($result['user']['email'])
                 ? '/update-email'
                 : '/dashboard';
-                
+
             return response()->json($result);
         } catch (\Throwable $e) {
             report($e);
@@ -106,43 +111,62 @@ class AuthController extends Controller
                 'message' => 'OAuth failed',
                 'error' => $e->getMessage()
             ], 400);
+      $user = User::find($result['user']['id']);
+        if ($user) {
+            $user->email_verified_at = now();
+            $user->save(); // حفظ التغيير في قاعدة البيانات
         }
+        $result['return_url'] = empty($result['user']['email'])
+            ? '/update-email'
+            : '/dashboard';
+
+        return response()->json($result);
+    } catch (\Throwable $e) {
+        report($e);
+        return response()->json([
+            'status' => 'error',
+            'message' => 'OAuth failed',
+            'error' => $e->getMessage()
+        ], 400);
     }
+}
 
     /**
      */
-    public function updateEmail(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'email' => 'required|email|unique:users,email',
+
+
+        public function updateEmail(Request $request)
+{
+    $user = $request->user();
+
+    $request->validate([
+        'email' => 'required|email|unique:users,email,' . $user->id,
+    ]);
+
+    return DB::transaction(function () use ($request, $user) {
+
+        $user->email = $request->email;
+        $user->email_verified_at = null;
+        $user->save();
+
+        $this->socialRepo->updateEmailForUser($user->id, $user->email);
+
+        $user->sendEmailVerificationNotification();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Email updated. Please check your inbox to verify your email.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'email_verified' => false,
+                'profile_completed' => (bool) $user->profile_completed,
+            ],
         ]);
+    });
+}
 
-        return DB::transaction(function () use ($request) {
-
-            $user = $this->userRepo->getById($request->user_id);
-            $user->email = $request->email;
-
-            $user->email_verified_at = null;
-            $user->save();
-
-            $this->socialRepo->updateEmailForUser($user->id, $user->email);
-
-            $user->sendEmailVerificationNotification();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Email updated. Please check your inbox to verify your email.',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->full_name,
-                    'email' => $user->email,
-                    'email_verified' => false,
-                    'profile_completed' => (bool) $user->profile_completed,
-                ],
-            ]);
-        });
-    }
     /**
      * Register
      *
@@ -204,3 +228,6 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 }
+
+
+

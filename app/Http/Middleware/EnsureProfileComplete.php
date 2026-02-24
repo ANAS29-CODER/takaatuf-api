@@ -35,9 +35,9 @@ class EnsureProfileComplete
         $missingFields[] = 'wallet';
     }
 
-    if ($user->role === 'Knowledge Requester' && empty($user->paypal_account)) {
-        $missingFields[] = 'paypal_account';
-    }
+  if ($user->role === 'Knowledge Requester' && !$user->paypalAccount()->whereNotNull('paypal_email')->exists()) {
+    $missingFields[] = 'paypal_account';
+}
 
     if (!empty($missingFields)) {
         return response()->json([
