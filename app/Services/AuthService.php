@@ -44,19 +44,15 @@ class AuthService
 
             return [
                 'status' => 'success',
-                // 'need_email' => is_null($user->email),
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->full_name,
                     'email' => $user->email,
                     'email_verified' => !is_null($user->email_verified_at),
                     'avatar' => $user->avatar,
-                    'role' => $user->role,
                 ],
                 'profile_completed' => (bool) $user->profile_completed,
                 'token' => $token,
-                // 'provider' => $provider,
-                // 'provider_id' => $providerId,
                 'message' => is_null($user->email)
                     ? 'Please enter your email to complete login'
                     : 'Login successful'
@@ -101,19 +97,15 @@ class AuthService
 
             return [
                 'status' => 'success',
-                // 'need_email' => is_null($user->email),
                 'user' => [
                     'id' => $user->id,
                     // 'name' => $user->full_name,
                     'email' => $user->email,
                     'email_verified' => !is_null($user->email_verified_at),
-                    // 'avatar' => $user->avatar,
-                    // 'role' => $user->role,
+                    'avatar' => $user->avatar,
                 ],
                 'token' => $token,
                 'profile_completed' => (bool) $user->profile_completed,
-                // 'provider' => $provider,
-                // 'provider_id' => $providerId,
                 'message' => is_null($user->email)
                     ? 'Please enter your email to complete login'
                     : 'Login successful'

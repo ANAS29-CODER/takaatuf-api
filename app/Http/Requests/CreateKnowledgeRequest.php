@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+
 use Illuminate\Foundation\Http\FormRequest;
+use App\Rules\MediaSizeRule;
 
 class CreateKnowledgeRequest extends FormRequest
 {
@@ -41,9 +43,12 @@ class CreateKnowledgeRequest extends FormRequest
 
 
             // Media (optional)
-            'media.*' => 'nullable|file',
-        ];
+
+        'media.*' => ['nullable', 'file', 'mimes:jpeg,jpg,png,gif,bmp,mp4,mov,avi,wmv,mkv', new MediaSizeRule()],
+       ];
     }
+
+
 
        public function messages(): array
     {
@@ -56,6 +61,7 @@ class CreateKnowledgeRequest extends FormRequest
             'number_of_kps.required' => 'Number of KPs is required.',
             'number_of_kps.integer' => 'Number of KPs must be an integer.',
             'neighborhood.required' => 'Neighborhood is required.',
+             'media.*.mimes' => 'Each media file must be an image or video (jpeg, png, gif, mp4, mov, avi, wmv, mkv).',
         ];
     }
 
