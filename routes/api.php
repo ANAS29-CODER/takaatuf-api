@@ -30,6 +30,8 @@ Route::middleware([
     Route::get('/oauth/{provider}/callback', [AuthController::class, 'callback'])
         ->where('provider', '(google|facebook)');
 });
+Route::middleware('auth:sanctum')->get('/auth/user', [AuthController::class, 'user']);
+
 Route::post('/oauth/updateEmail', [AuthController::class, 'updateEmail'])
     ->middleware('auth:sanctum');;
 
@@ -41,9 +43,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // PayPal OAuth Callback (public route - user redirected from PayPal)
 Route::get('/paypal/callback', [PayPalController::class, 'callback'])->name('paypal.callback');
 
-Route::get('/email/verify/{id}/{hash}',
-    [VerificationController::class, 'verify']
-)->middleware(['signed'])->name('verification.verify');
+Route::get('/verify-email', [VerificationController::class, 'verify']);
 
 Route::post('/email/resend', [VerificationController::class, 'resend'])
     ->middleware(['auth:sanctum', 'throttle:6,1'])->name('verification.resend');
@@ -109,6 +109,7 @@ Route::group([
         Route::prefix('dashboard/kr')->group(function(){
      Route::get('/', [KnowledgeRequestController::class, 'index']);
      Route::post('/submit-request ', [KnowledgeRequestController::class, 'store']);
+     Route::get('/requests/{id}', [KnowledgeRequestController::class, 'show']);
         Route::get('/payment/{request_id}', [PaymentController::class, 'create'])->name('payment.create');
 });
         // PayPal routes for Knowledge Requester
@@ -121,7 +122,6 @@ Route::group([
         });
     });
 });
-
 
 // Admin Routes - Protected by auth and admin role middleware
 Route::group([

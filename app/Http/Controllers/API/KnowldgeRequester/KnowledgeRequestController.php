@@ -20,6 +20,37 @@ class KnowledgeRequestController extends Controller
         $this->service = $service;
     }
 
+    public function show($id)
+{
+    try {
+
+        $user = auth()->user();
+
+        $requestModel = KnowledgeRequest::with([
+            'media',
+            'user'
+        ])
+        ->where('id', $id)
+        ->where('user_id', $user->id)
+        ->firstOrFail();
+
+        return response()->json([
+            'data' => new KnowledgeRequestResource($requestModel)
+        ], 200);
+
+    } catch (\Throwable $e) {
+
+        Log::error('Failed to load KR details', [
+            'user_id' => auth()->id(),
+            'request_id' => $id,
+            'error' => $e->getMessage(),
+        ]);
+
+        return response()->json([
+            'message' => 'Request not found.'
+        ], 404);
+    }
+}
     public function store(CreateKnowledgeRequest $request)
     {
         $data = $request->validated();
