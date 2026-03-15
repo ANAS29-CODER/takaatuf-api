@@ -22,6 +22,7 @@ class PendingRequestResource extends JsonResource
             'payout_amount_raw' => (float) $this->pay_per_kp,
             'kps_still_needed' => $this->kps_still_needed ?? $this->number_of_kps,
             'total_kps_needed' => $this->number_of_kps,
+            'status' => $this->pivot->status,
             'due_date' => $this->due_date ? $this->due_date->format('Y-m-d') : null,
             'created_at' => $this->created_at->toDateTimeString(),
         ];

@@ -72,12 +72,15 @@ class PayoutController extends Controller
         try {
             $result = $this->payoutService->requestPayout($user, $validated['wallet_id'] ?? null);
 
+
+
             if (!$result['success']) {
                 return response()->json([
                     'message' => $result['message'],
                 ], 400);
             }
 
+          
             return response()->json([
                 'message' => $result['message'],
                 'payout' => new PayoutResource($result['payout']),
