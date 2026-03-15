@@ -16,10 +16,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Validator;
+use SendGrid\Mail\Mail;
 
 class AuthController extends Controller
 {
@@ -35,19 +35,13 @@ class AuthController extends Controller
         $this->socialRepo = $socialRepo;
     }
 
-    /**
-     * Redirect to provider
-     */
+
+   // 🔹 خطوة 1: redirect to provider
     public function redirect(Request $request, string $provider)
     {
+        $provider = strtolower($provider);
         if (!in_array($provider, ['google', 'facebook'])) {
-            return response()->json(['message' => 'Invalid provider'], 400);
-        }
-
-        // Only allow relative return URLs
-        $returnUrl = $request->query('returnUrl', '/');
-        if (!str_starts_with($returnUrl, '/')) {
-            $returnUrl = '/';
+            return redirect(config('app.frontend_url') . '/login?error=InvalidProvider');
         }
 
         $driver = Socialite::driver($provider);
@@ -58,81 +52,95 @@ class AuthController extends Controller
             $driver->scopes(['email', 'public_profile']);
         }
 
-        return $driver
-            ->with(['state' => encrypt($returnUrl)])
-            ->stateless()
-            ->redirect();
+        // optional: يمكن تحدد returnUrl
+        $returnUrl = $request->query('returnUrl', null);
+
+        if ($returnUrl) {
+            $driver->with(['state' => encrypt($returnUrl)]);
+        }
+
+        return $driver->stateless()->redirect();
     }
 
-    public function callback(Request $request, string $provider)
-    {
-        $provider = strtolower($provider);
 
+    public function callback(Request $request, string $provider)
+{
     $provider = strtolower($provider);
 
-        if (!in_array($provider, ['google', 'facebook'])) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Invalid provider'
-            ], 400);
+    if (!in_array($provider, ['google', 'facebook'])) {
+        return redirect(config('app.frontend_url') . '/login?error=InvalidProvider');
+    }
+
+    if ($request->get('error') === 'access_denied') {
+        return redirect(config('app.frontend_url') . '/login?error=AccessDenied');
+    }
+
+    try {
+        $driver = Socialite::driver($provider)->stateless();
+
+        if ($provider === 'facebook') {
+            $driver->fields(['id', 'name', 'email', 'picture']);
+        } else if ($provider === 'google') {
+
+            $driver->scopes(['openid', 'profile', 'email']);
         }
 
+        $socialUser = $driver->user();
 
-        if ($request->get('error') === 'access_denied') {
-            return response()->json([
-                'status' => 'cancelled',
-                'message' => 'Login was cancelled. Please try again.'
-            ], 200);
-        }
-
-
-        try {
-            $driver = Socialite::driver($provider)->stateless();
-
-            if ($provider === 'facebook') {
-                $driver->fields(['id', 'name', 'email', 'picture']);
-            }
-
-
-            $socialUser = $driver->user();
-
-            $result = $this->authService->oauthLogin($provider, $socialUser);
         $result = $this->authService->oauthLogin($provider, $socialUser);
 
-            $result['return_url'] = empty($result['user']['email'])
-                ? '/update-email'
-                : '/dashboard';
+        if ($provider === 'google' && !empty($socialUser->getEmail())) {
+            $user = \App\Models\User::find($result['user']['id']);
 
-            return response()->json($result);
-        } catch (\Throwable $e) {
-            report($e);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'OAuth failed',
-                'error' => $e->getMessage()
-            ], 400);
-      $user = User::find($result['user']['id']);
-        if ($user) {
-            $user->email_verified_at = now();
-            $user->save(); // حفظ التغيير في قاعدة البيانات
+            if ($user && !$user->email_verified_at) {
+                $user->email_verified_at = now();
+                $user->save();
+                $result['user']['email_verified'] = true;
+            }
         }
-        $result['return_url'] = empty($result['user']['email'])
-            ? '/update-email'
-            : '/dashboard';
 
-        return response()->json($result);
+        $frontendCallback = config('app.frontend_url') . "/oauth/{$provider}/callback";
+
+        $redirectTo = $frontendCallback
+            . '?token=' . urlencode($result['token'])
+            . '&status=' . urlencode($result['status']);
+
+        return redirect($redirectTo);
+
     } catch (\Throwable $e) {
         report($e);
-        return response()->json([
-            'status' => 'error',
-            'message' => 'OAuth failed',
-            'error' => $e->getMessage()
-        ], 400);
+        return redirect(config('app.frontend_url') . '/login?error=OAuthFailed');
     }
 }
 
-    /**
-     */
+ public function user(Request $request)
+{
+    $user = $request->user();
+
+    if (!$user) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Unauthenticated'
+        ], 401);
+    }
+
+    $provider = $user->socialAccounts()->value('provider');
+
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'id' => $user->id,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'email_verified' => !is_null($user->email_verified_at),
+            'avatar' => $user->avatar,
+            'profile_completed' => (bool) $user->profile_completed,
+            'role'=>$user->role,
+            'provider' => $provider,
+            'created_at' => $user->created_at,
+        ]
+    ]);
+}
 
 
         public function updateEmail(Request $request)
@@ -151,7 +159,7 @@ class AuthController extends Controller
 
         $this->socialRepo->updateEmailForUser($user->id, $user->email);
 
-        $user->sendEmailVerificationNotification();
+        // $user->sendEmailVerificationNotification();
 
         return response()->json([
             'status' => 'success',
@@ -174,28 +182,55 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
 
-    public function register(RegisterRequest $request)
-    {
-        $user = User::create([
-            'full_name' => $request->full_name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+    public function register(Request $request)
+{
+    $request->validate([
+        'full_name' => 'required|string|max:255',
+        'email' => 'required|email|unique:users,email',
+        'password' => 'required|string|min:6',
+    ]);
 
-        // Send verification email
-        $user->sendEmailVerificationNotification();
+    $user = User::create([
+        'full_name' => $request->full_name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+    ]);
 
-        // Create token
-        $token = $user->createToken('Takaatuf App')->plainTextToken;
+    $verificationToken = sha1($user->email . time());
 
-        return response()->json([
-            'user'    => new UserResource($user),
-            'profile_completed' => (bool) $user->profile_completed,
-            'token'   => $token,
-            'message' => 'Registration successful, please verify your email.',
-        ], 201);
-    }
+    $user->email_verification_token = $verificationToken;
+    $user->save();
 
+    $verificationUrl = config('app.url') . '/api/verify-email?token=' . $verificationToken;
+
+    $email = new Mail();
+    $email->setFrom("no-reply@takaatuf.org", "Takaatuf");
+    $email->setSubject("Verify your email");
+    $email->addTo($user->email, $user->full_name);
+
+    $email->addContent(
+        "text/html",
+        "
+        <h3>Hello {$user->full_name}</h3>
+        <p>Please verify your email:</p>
+        <a href='{$verificationUrl}'
+        style='padding:10px 20px;background:#2F80ED;color:white;text-decoration:none;border-radius:5px'>
+        Verify Email
+        </a>
+        "
+    );
+    $sendgrid = new \SendGrid(env('SENDGRID_API_KEY'));
+    $sendgrid->send($email);
+
+    // token للتطبيق
+    $token = $user->createToken('Takaatuf App')->plainTextToken;
+
+    return response()->json([
+        'user' => new UserResource($user),
+        'token' => $token,
+        'message' => 'Registration successful, please verify your email.'
+    ], 201);
+}
     // Login with email
 
     public function login(LoginRequest $request)

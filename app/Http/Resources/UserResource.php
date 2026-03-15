@@ -19,9 +19,9 @@ class UserResource extends JsonResource
             'full_name' => $this->full_name,
             'email' => $this->email,
             'email_verified'=>(bool)$this->email_verified_at,
-            // 'profile_completed' => (bool) $this->profile_completed,
-            //  'role' => $this->role,
-            // 'avatar' => $this->avatar ?? null,
+            'profile_completed' => (bool) $this->profile_completed,
+             'role' => $this->role,
+            'avatar' => $this->avatar ?? null,
 
         ];
     }

@@ -218,10 +218,8 @@ class ProfileController extends Controller
 
         return response()->json(['message' => 'User role not supported'], 400);
     }
-
-
-
-public function completeProfile(Request $request)
+    
+     public function completeProfile(Request $request)
 {
     $user = auth()->user();
 
@@ -269,16 +267,15 @@ public function completeProfile(Request $request)
         'profile_completed' => $user->profile_completed,
     ], 200);
 }
-
-public function confirmLocation(Request $request)
+  public function confirmLocation(Request $request)
 {
-    $data = $request->validate([
-        'user_confirmation' => 'required|in:I am in Gaza,I am outside Gaza',
+     $data = $request->validate([
+        'user_confirmation' => 'required|in:IN_GAZA,OUTSIDE_GAZA',
     ]);
 
     $user = auth()->user();
 
-    $role = $data['user_confirmation'] === 'I am in Gaza'
+    $role = $data['user_confirmation'] === 'IN_GAZA'
         ? 'Knowledge Provider'
         : 'Knowledge Requester';
 
