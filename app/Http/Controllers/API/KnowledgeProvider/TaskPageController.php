@@ -4,13 +4,16 @@ namespace App\Http\Controllers\API\KnowledgeProvider;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SaveDraftRequest;
+use App\Http\Requests\SubmitWorkRequest;
 use App\Http\Requests\UploadSubmissionMediaRequest;
+use App\Http\Resources\KP\RequestDetailResource;
 use App\Http\Resources\KP\TaskPageResource;
+use App\Models\KnowledgeRequest;
 use App\Services\TaskPageService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Exception;
 
 class TaskPageController extends Controller
 {
@@ -23,9 +26,6 @@ class TaskPageController extends Controller
 
     /**
      * Get task page details for a specific request
-     *
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function show(int $requestId): JsonResponse
     {
@@ -34,7 +34,7 @@ class TaskPageController extends Controller
 
             $taskData = $this->taskPageService->getTaskPageData($user, $requestId);
 
-            if (!$taskData) {
+            if (! $taskData) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Access denied. You are not assigned to this request.',
@@ -62,11 +62,36 @@ class TaskPageController extends Controller
     }
 
     /**
+     * Get details of any knowledge request by ID
+     */
+    public function requestDetails(int $requestId): JsonResponse
+    {
+        try {
+            $knowledgeRequest = KnowledgeRequest::with(['media', 'creator'])->find($requestId);
+
+            if (! $knowledgeRequest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Request not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => new RequestDetailResource($knowledgeRequest),
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load request details. Please try again.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+                'retry' => true,
+            ], 500);
+        }
+    }
+
+    /**
      * Save draft work
-     *
-     * @param SaveDraftRequest $request
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function saveDraft(SaveDraftRequest $request, int $requestId): JsonResponse
     {
@@ -76,23 +101,34 @@ class TaskPageController extends Controller
             $result = $this->taskPageService->saveDraft(
                 $user,
                 $requestId,
-                $request->input('text_content')
+                $request->input('text_content'),
+                $request->file('files')
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
                 ], 400);
             }
 
+            $responseData = [
+                'submission_id' => $result['submission']->id,
+                'status' => $result['submission']->status,
+            ];
+
+            if (! empty($result['uploaded_media'])) {
+                $responseData['uploaded_media'] = $result['uploaded_media'];
+            }
+
+            if (! empty($result['upload_errors'])) {
+                $responseData['upload_errors'] = $result['upload_errors'];
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => $result['message'],
-                'data' => [
-                    'submission_id' => $result['submission']->id,
-                    'status' => $result['submission']->status,
-                ],
+                'data' => $responseData,
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -106,10 +142,6 @@ class TaskPageController extends Controller
 
     /**
      * Upload media files
-     *
-     * @param UploadSubmissionMediaRequest $request
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function uploadMedia(UploadSubmissionMediaRequest $request, int $requestId): JsonResponse
     {
@@ -144,10 +176,6 @@ class TaskPageController extends Controller
 
     /**
      * Remove a media file
-     *
-     * @param int $requestId
-     * @param int $mediaId
-     * @return JsonResponse
      */
     public function removeMedia(int $requestId, int $mediaId): JsonResponse
     {
@@ -156,7 +184,7 @@ class TaskPageController extends Controller
 
             $result = $this->taskPageService->removeMedia($user, $mediaId);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -178,18 +206,20 @@ class TaskPageController extends Controller
 
     /**
      * Submit work for review
-     *
-     * @param int $requestId
-     * @return JsonResponse
      */
-    public function submitWork(int $requestId): JsonResponse
+    public function submitWork(SubmitWorkRequest $request, int $requestId): JsonResponse
     {
         try {
             $user = Auth::user();
 
-            $result = $this->taskPageService->submitWork($user, $requestId);
+            $result = $this->taskPageService->submitWork(
+                $user,
+                $requestId,
+                $request->input('text_content'),
+                $request->file('files')
+            );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json([
                     'success' => false,
                     'message' => $result['message'],
@@ -218,9 +248,6 @@ class TaskPageController extends Controller
 
     /**
      * Get submission status
-     *
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function getStatus(int $requestId): JsonResponse
     {
@@ -229,7 +256,7 @@ class TaskPageController extends Controller
 
             $taskData = $this->taskPageService->getTaskPageData($user, $requestId);
 
-            if (!$taskData) {
+            if (! $taskData) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Access denied. You are not assigned to this request.',

@@ -16,7 +16,9 @@ use Illuminate\Support\Facades\Storage;
 class TaskPageService
 {
     protected KnowledgeProviderRepository $kpRepo;
+
     protected WorkSubmissionRepository $submissionRepo;
+
     protected EarningRepository $earningRepo;
 
     public function __construct(
@@ -34,16 +36,15 @@ class TaskPageService
      */
     public function getTaskPageData(User $user, int $requestId): ?array
     {
-        if (!$this->kpRepo->isAssignedToRequest($user->id, $requestId)) {
+        if (! $this->kpRepo->isAssignedToRequest($user->id, $requestId)) {
             return null;
         }
 
         $request = $this->kpRepo->getTaskPageDetails($user->id, $requestId);
 
-        if (!$request) {
+        if (! $request) {
             return null;
         }
-
         // Get or create work submission
         $submission = $this->submissionRepo->getByUserAndRequest($user->id, $requestId);
 
@@ -62,12 +63,12 @@ class TaskPageService
     public function canEditSubmission(int $userId, int $requestId, ?WorkSubmission $submission): bool
     {
         // Check assignment status first
-        if (!$this->kpRepo->canEditAssignment($userId, $requestId)) {
+        if (! $this->kpRepo->canEditAssignment($userId, $requestId)) {
             return false;
         }
 
         // If no submission yet, can edit
-        if (!$submission) {
+        if (! $submission) {
             return true;
         }
 
@@ -79,7 +80,7 @@ class TaskPageService
      */
     public function isReadOnly(?WorkSubmission $submission): bool
     {
-        if (!$submission) {
+        if (! $submission) {
             return false;
         }
 
@@ -120,13 +121,13 @@ class TaskPageService
     }
 
     /**
-     * Save draft work
+     * Save draft work with optional text content and files
      */
-    public function saveDraft(User $user, int $requestId, ?string $textContent): array
+    public function saveDraft(User $user, int $requestId, ?string $textContent, ?array $files = null): array
     {
         $submission = $this->submissionRepo->getByUserAndRequest($user->id, $requestId);
 
-        if (!$this->canEditSubmission($user->id, $requestId, $submission)) {
+        if (! $this->canEditSubmission($user->id, $requestId, $submission)) {
             return [
                 'success' => false,
                 'message' => 'You cannot edit this submission.',
@@ -135,6 +136,19 @@ class TaskPageService
 
         try {
             $submission = $this->submissionRepo->saveDraft($user->id, $requestId, $textContent);
+
+            // Upload files if provided
+            $uploadedMedia = [];
+            $uploadErrors = [];
+            if (! empty($files)) {
+                foreach ($files as $file) {
+                    try {
+                        $uploadedMedia[] = $this->processUploadedFile($file, $submission->id);
+                    } catch (\Exception $e) {
+                        $uploadErrors[] = $file->getClientOriginalName().': '.$e->getMessage();
+                    }
+                }
+            }
 
             $assignment = $this->kpRepo->getAssignment($user->id, $requestId);
 
@@ -154,7 +168,9 @@ class TaskPageService
             return [
                 'success' => true,
                 'message' => 'Draft saved successfully.',
-                'submission' => $submission,
+                'submission' => $submission->fresh(['media']),
+                'uploaded_media' => $uploadedMedia,
+                'upload_errors' => $uploadErrors,
             ];
         } catch (\Exception $e) {
             return [
@@ -171,7 +187,7 @@ class TaskPageService
     {
         $submission = $this->submissionRepo->getByUserAndRequest($user->id, $requestId);
 
-        if (!$this->canEditSubmission($user->id, $requestId, $submission)) {
+        if (! $this->canEditSubmission($user->id, $requestId, $submission)) {
             return [
                 'success' => false,
                 'message' => 'You cannot upload files to this submission.',
@@ -189,7 +205,7 @@ class TaskPageService
                 $mediaData = $this->processUploadedFile($file, $submission->id);
                 $uploadedMedia[] = $mediaData;
             } catch (\Exception $e) {
-                $errors[] = $file->getClientOriginalName() . ': ' . $e->getMessage();
+                $errors[] = $file->getClientOriginalName().': '.$e->getMessage();
             }
         }
 
@@ -223,7 +239,7 @@ class TaskPageService
         $type = $this->getFileType($extension);
 
         // Store file
-        $path = $file->store('work_submissions/' . $submissionId, 'public');
+        $path = $file->store('work_submissions/'.$submissionId, 'public');
 
         // Create media record
         $media = $this->submissionRepo->addMedia(
@@ -276,21 +292,56 @@ class TaskPageService
     }
 
     /**
-     * Submit work for review
+     * Submit work for review with optional text content and files
      */
-    public function submitWork(User $user, int $requestId): array
+    public function submitWork(User $user, int $requestId, ?string $textContent = null, ?array $files = null): array
     {
         $submission = $this->submissionRepo->getByUserAndRequest($user->id, $requestId);
 
-        if (!$submission) {
+        if ($textContent !== null || ! empty($files)) {
+            $existingSubmission = $submission;
+
+            if (! $existingSubmission) {
+                if (! $this->canEditSubmission($user->id, $requestId, null)) {
+                    return [
+                        'success' => false,
+                        'message' => 'You cannot submit this work.',
+                        'errors' => [],
+                    ];
+                }
+            } elseif (! $this->canEditSubmission($user->id, $requestId, $existingSubmission)) {
+                return [
+                    'success' => false,
+                    'message' => 'You cannot submit this work.',
+                    'errors' => [],
+                ];
+            }
+
+            // Save text content
+            if ($textContent !== null) {
+                $submission = $this->submissionRepo->saveDraft($user->id, $requestId, $textContent);
+            } elseif (! $submission) {
+                $submission = $this->submissionRepo->getOrCreate($user->id, $requestId);
+            }
+
+            // Upload files
+            if (! empty($files)) {
+                foreach ($files as $file) {
+                    $this->processUploadedFile($file, $submission->id);
+                }
+                $submission = $submission->fresh(['media']);
+            }
+        }
+
+        if (! $submission) {
             return [
                 'success' => false,
-                'message' => 'No work found to submit. Please save your work first.',
+                'message' => 'No work found to submit. Please provide text content or files.',
                 'errors' => [],
             ];
         }
 
-        if (!$this->canEditSubmission($user->id, $requestId, $submission)) {
+        if (! $this->canEditSubmission($user->id, $requestId, $submission)) {
             return [
                 'success' => false,
                 'message' => 'You cannot submit this work.',
@@ -300,7 +351,7 @@ class TaskPageService
 
         // Get request category for validation
         $request = KnowledgeRequest::find($requestId);
-        if (!$request) {
+        if (! $request) {
             return [
                 'success' => false,
                 'message' => 'Request not found.',
@@ -310,7 +361,7 @@ class TaskPageService
 
         // Validate required content
         $validationErrors = $this->submissionRepo->hasRequiredContent($submission, $request->category);
-        if (!empty($validationErrors)) {
+        if (! empty($validationErrors)) {
             return [
                 'success' => false,
                 'message' => 'Please complete all required fields before submitting.',
@@ -325,8 +376,6 @@ class TaskPageService
             $submission = $this->submissionRepo->submitWork($user->id, $requestId);
 
             // Update assignment progress to 90% (submitted, awaiting review)
-
-
             $assignment = UserKnowledgeRequest::where('user_id', $user->id)
                 ->where('knowledge_request_id', $requestId)
                 ->first();
@@ -336,7 +385,6 @@ class TaskPageService
                 $assignment->status = UserKnowledgeRequest::STATUS_AWAITING_REVIEW;
                 $assignment->save();
             }
-
 
             $this->kpRepo->recalculateRequestProgress($requestId);
 
@@ -349,6 +397,7 @@ class TaskPageService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
+
             return [
                 'success' => false,
                 'message' => 'Failed to submit work. Please try again.',
@@ -373,11 +422,12 @@ class TaskPageService
             // Create earning record
             $assignment = $this->kpRepo->getAssignment($userId, $requestId);
             if ($assignment) {
-                $this->earningRepo->create(
-                    $userId,
-                    $assignment->payout_amount,
-                    'Payment for completed request #' . $requestId
-                );
+                $this->earningRepo->create([
+                    'user_id' => $userId,
+                    'knowledge_request_id' => $requestId,
+                    'amount' => $assignment->payout_amount,
+                    'description' => 'Payment for completed request #'.$requestId,
+                ]);
             }
 
             $assignment->progress = UserKnowledgeRequest::PROGRESS_REVIEWED;
@@ -394,6 +444,7 @@ class TaskPageService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
+
             return [
                 'success' => false,
                 'message' => 'Failed to approve submission.',
@@ -425,6 +476,7 @@ class TaskPageService
             ];
         } catch (\Exception $e) {
             DB::rollBack();
+
             return [
                 'success' => false,
                 'message' => 'Failed to reject submission.',

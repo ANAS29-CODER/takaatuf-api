@@ -17,33 +17,18 @@ class KnowledgeProviderRepository
      */
     public function getActiveRequestsForKP(int $userId): Collection
     {
-        return KnowledgeRequest::query()
-            ->select([
-                'knowledge_requests.*',
-                'user_knowledge_request.status as kp_status',
-                'user_knowledge_request.progress as kp_progress',
-                'user_knowledge_request.payout_amount as kp_payout_amount',
-            ])
-            ->join(
-                'user_knowledge_request',
-                'knowledge_requests.id',
-                '=',
-                'user_knowledge_request.knowledge_request_id'
-            )
-            ->where('user_knowledge_request.user_id', $userId)
-            ->whereIn(
-                'user_knowledge_request.status',
-                UserKnowledgeRequest::getActiveStatuses()
-            )
-            ->orderByDesc('user_knowledge_request.updated_at')
+        return User::findOrFail($userId)
+            ->knowledgeRequests()
+            ->wherePivotIn('status', UserKnowledgeRequest::getActiveStatuses())
+            ->orderByPivot('updated_at', 'desc')
             ->with('media')
             ->get()
             ->each(function ($request) {
-                $request->kp_payout_amount ??= $request->pay_per_kp;
-                $request->kp_progress ??= 0;
+                $request->kp_status = $request->pivot->status;
+                $request->kp_progress = $request->pivot->progress ?? 0;
+                $request->kp_payout_amount = $request->pivot->payout_amount ?? $request->pay_per_kp;
             });
     }
-
 
     /**
      * Get available requests for a Knowledge Provider
@@ -53,31 +38,21 @@ class KnowledgeProviderRepository
     public function getAvailableRequestsForKP(int $userId, ?string $neighborhood = null): Collection
     {
         return KnowledgeRequest::query()
-            ->select([
-                'knowledge_requests.*',
-                DB::raw('COUNT(ukr.id) as assigned_kps_count'),
-                DB::raw('GREATEST(knowledge_requests.number_of_kps - COUNT(ukr.id), 0) as kps_still_needed'),
-            ])
-            ->leftJoin('user_knowledge_request as ukr', function ($join) {
-                $join->on('knowledge_requests.id', '=', 'ukr.knowledge_request_id')
-                    ->whereIn('ukr.status', UserKnowledgeRequest::getActiveStatuses());
+            ->where('status', KnowledgeRequest::STATUS_AVAILABLE)
+            ->whereDoesntHave('users', fn ($q) => $q->where('users.id', $userId))
+            //   ->when($neighborhood, fn($q) => $q->where('neighborhood', $neighborhood))
+            ->where(function ($q) {
+                $q->whereRaw('number_of_kps > (
+                SELECT COUNT(*)
+                FROM user_knowledge_request
+                WHERE knowledge_request_id = knowledge_requests.id
+                AND status IN ("in_progress","awaiting_review")
+            )');
             })
-            ->where('knowledge_requests.status', KnowledgeRequest::STATUS_AVAILABLE)
-            ->whereNotExists(function ($q) use ($userId) {
-                $q->select(DB::raw(1))
-                    ->from('user_knowledge_request')
-                    ->whereColumn('knowledge_request_id', 'knowledge_requests.id')
-                    ->where('user_id', $userId);
-            })
-            // Optional neighborhood filter
-            // ->when($neighborhood, fn ($q) => $q->where('neighborhood', $neighborhood))
-            ->groupBy('knowledge_requests.id')
-            ->having('kps_still_needed', '>', 0)
-            ->orderByDesc('knowledge_requests.created_at')
+            ->latest()
             ->with('media')
             ->get();
     }
-
 
     /**
      * Get completed requests for a Knowledge Provider
@@ -104,28 +79,50 @@ class KnowledgeProviderRepository
             ->get();
     }
 
-
     public function getPendingRequestsForKP(int $userId): Collection
     {
-        return KnowledgeRequest::query()
-            ->select([
-                'knowledge_requests.*',
-                'user_knowledge_request.status as kp_status',
-                'user_knowledge_request.progress as kp_progress',
-                'user_knowledge_request.payout_amount as kp_payout_amount',
-            ])
-            ->join('user_knowledge_request', 'knowledge_requests.id', '=', 'user_knowledge_request.knowledge_request_id')
-            ->where('user_knowledge_request.user_id', $userId)
-            ->where('user_knowledge_request.status', UserKnowledgeRequest::STATUS_PENDING)
-            ->orderByDesc('user_knowledge_request.updated_at')
+        return User::findOrFail($userId)
+            ->knowledgeRequests()
+            ->wherePivot('status', UserKnowledgeRequest::STATUS_PENDING)
+            ->orderByPivot('updated_at', 'desc')
             ->with('media')
             ->get()
             ->each(function ($request) {
-                $request->kp_payout_amount ??= $request->pay_per_kp;
+                $request->kp_status = $request->pivot->status;
+                $request->kp_progress = $request->pivot->progress;
+                $request->kp_payout_amount = $request->pivot->payout_amount ?? $request->pay_per_kp;
             });
     }
 
+    public function getSubmittedRequestsForKP(int $userId): Collection
+    {
+        return User::findOrFail($userId)
+            ->knowledgeRequests()
+            ->wherePivot('status', UserKnowledgeRequest::STATUS_AWAITING_REVIEW)
+            ->orderByPivot('updated_at', 'desc')
+            ->with('media')
+            ->get()
+            ->each(function ($request) {
+                $request->kp_status = $request->pivot->status;
+                $request->kp_progress = $request->pivot->progress;
+                $request->kp_payout_amount = $request->pivot->payout_amount ?? $request->pay_per_kp;
+            });
+    }
 
+    public function getRejectedRequestsForKP(int $userId): Collection
+    {
+        return User::findOrFail($userId)
+            ->knowledgeRequests()
+            ->wherePivot('status', UserKnowledgeRequest::STATUS_REJECTED)
+            ->orderByPivot('updated_at', 'desc')
+            ->with('media')
+            ->get()
+            ->each(function ($request) {
+                $request->kp_status = $request->pivot->status;
+                $request->kp_progress = $request->pivot->progress;
+                $request->kp_payout_amount = $request->pivot->payout_amount ?? $request->pay_per_kp;
+            });
+    }
 
     /**
      * Apply to a knowledge request
@@ -270,8 +267,6 @@ class KnowledgeProviderRepository
             $updateData['progress'] = UserKnowledgeRequest::PROGRESS_REVIEWED;
             $updateData['completed_at'] = now();
         }
-
-
 
         return DB::table('user_knowledge_request')
             ->where('user_id', $userId)
