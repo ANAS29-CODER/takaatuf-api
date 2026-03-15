@@ -15,7 +15,11 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "*",
         "laravel/tinker": "^2.10.1",
+<<<<<<< Updated upstream
         "sendgrid/sendgrid": "*",
+=======
+        "opcodesio/log-viewer": "^3.23",
+>>>>>>> Stashed changes
         "symfony/mailtrap-mailer": "^7.4"
     },
     "require-dev": {
