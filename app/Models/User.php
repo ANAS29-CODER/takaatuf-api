@@ -15,7 +15,6 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-
     const KNOWLEDGE_PROVIDER = 'Knowledge Provider';
     const KNOWLEDGE_REQUESTER = 'Knowledge Requester';
     const ADMIN = 'Admin';
@@ -30,12 +29,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'oauth_provider',
-    'email_verification_token',
-    'email_verified_at',
+        'email_verification_token',
+        'email_verified_at',
         'oauth_provider_id',
         'profile_completed',
         'city_neighborhood',
         'role',
+        'avatar',
     ];
 
     /**
@@ -68,7 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(\App\Models\SocialAccount::class);
     }
 
-        public function auditLogs()
+    public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
     }
@@ -121,7 +121,6 @@ class User extends Authenticatable implements MustVerifyEmail
             ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getCompletedStatuses());
     }
 
-
     public function paypalAccount()
     {
         return $this->hasOne(PaypalAccount::class);
@@ -133,5 +132,10 @@ class User extends Authenticatable implements MustVerifyEmail
     public function workSubmissions()
     {
         return $this->hasMany(WorkSubmission::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 }

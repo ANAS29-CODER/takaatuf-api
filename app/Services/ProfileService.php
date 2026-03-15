@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Repositories\UserRepository;
-use GeoIp2\Database\Reader;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProfileService

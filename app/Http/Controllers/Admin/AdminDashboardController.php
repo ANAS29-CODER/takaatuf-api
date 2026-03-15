@@ -11,8 +11,8 @@ use App\Http\Resources\Admin\AdminKPApplicationResource;
 use App\Http\Resources\Admin\AdminPayoutResource;
 use App\Http\Resources\Admin\AdminWorkSubmissionResource;
 use App\Models\BudgetHistory;
-use App\Models\KnowledgeRequest;
 use App\Models\Payout;
+use App\Models\WorkSubmission;
 use App\Services\AdminService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -186,7 +186,7 @@ class AdminDashboardController extends Controller
             'request_id' => 'required|integer|exists:knowledge_requests,id',
         ]);
 
-     
+
         $admin = auth()->user();
         $result = $this->adminService->approveKPApplication(
             $validated['user_id'],
@@ -440,10 +440,15 @@ class AdminDashboardController extends Controller
     /**
      * Approve a work submission
      */
-    public function approveSubmission(int $id, Request $request): JsonResponse
+    public function approveSubmission(int $knowledge_request_id, int $kp_id, Request $request): JsonResponse
     {
         $admin = auth()->user();
-        $result = $this->adminService->approveSubmission($id, $admin, $request);
+
+        $submission = WorkSubmission::where('knowledge_request_id', $knowledge_request_id)
+            ->where('user_id', $kp_id)
+            ->firstOrFail();
+
+        $result = $this->adminService->approveSubmission($submission->id, $admin, $request);
 
         if (!$result['success']) {
             return response()->json(['message' => $result['message']], 400);
@@ -457,16 +462,21 @@ class AdminDashboardController extends Controller
     /**
      * Reject a work submission
      */
-    public function rejectSubmission(int $id, Request $httpRequest): JsonResponse
+    public function rejectSubmission(int $knowledge_request_id, int $kp_id, Request $httpRequest): JsonResponse
     {
         $validated = $httpRequest->validate([
             'reason' => 'nullable|string|max:1000',
         ]);
 
         $admin = auth()->user();
-        $result = $this->adminService->rejectSubmission($id, $admin, $validated['reason'] ?? null, $httpRequest);
 
-        if (!$result['success']) {
+        $submission = WorkSubmission::where('knowledge_request_id', $knowledge_request_id)
+            ->where('user_id', $kp_id)
+            ->firstOrFail();
+
+        $result = $this->adminService->rejectSubmission($submission->id, $admin, $validated['reason'] ?? null, $httpRequest);
+
+        if (! $result['success']) {
             return response()->json(['message' => $result['message']], 400);
         }
 

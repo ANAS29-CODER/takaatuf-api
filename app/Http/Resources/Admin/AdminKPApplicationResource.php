@@ -15,21 +15,13 @@ class AdminKPApplicationResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'knowledge_request_id' => $this->knowledge_request_id,
             'kp' => $this->whenLoaded('user', function () {
                 return [
                     'id' => $this->user->id,
                     'name' => $this->user->full_name,
                     'email' => $this->user->email,
                     'location' => $this->user->city_neighborhood,
-                ];
-            }),
-            'knowledge_request' => $this->whenLoaded('knowledgeRequest', function () {
-                return [
-                    'id' => $this->knowledgeRequest->id,
-                    'category' => $this->knowledgeRequest->category,
-                    'details' => $this->knowledgeRequest->details,
-                    'pay_per_kp' => number_format((float) $this->knowledgeRequest->pay_per_kp, 2),
                 ];
             }),
             'status' => $this->status,
