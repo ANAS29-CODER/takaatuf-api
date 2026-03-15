@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\KnowledgeRequest;
 use App\Models\User;
 use App\Models\UserKnowledgeRequest;
 use App\Repositories\EarningRepository;
@@ -32,6 +31,8 @@ class KnowledgeProviderDashboardService
         $availableRequests = $this->getAvailableRequests($user);
         $completedRequests = $this->getCompletedRequests($user);
         $pendingRequests = $this->getPendingRequests($user);
+        $submittedRequests = $this->getSubmittedRequests($user);
+        $rejectedRequests = $this->getRejectedRequests($user);
 
         $hasActiveRequests = $activeRequests->isNotEmpty();
 
@@ -41,6 +42,8 @@ class KnowledgeProviderDashboardService
             'active_requests' => $activeRequests,
             'available_requests' => $availableRequests,
             'pending_requests' => $pendingRequests,
+            'submitted_requests' => $submittedRequests,
+            'rejected_requests' => $rejectedRequests,
             'completed_requests' => [
                 'total_count' => $completedRequests->count(),
                 'items' => $completedRequests,
@@ -75,6 +78,16 @@ class KnowledgeProviderDashboardService
     public function getPendingRequests(User $user): Collection
     {
         return $this->kpRepo->getPendingRequestsForKP($user->id);
+    }
+
+    public function getSubmittedRequests(User $user): Collection
+    {
+        return $this->kpRepo->getSubmittedRequestsForKP($user->id);
+    }
+
+    public function getRejectedRequests(User $user): Collection
+    {
+        return $this->kpRepo->getRejectedRequestsForKP($user->id);
     }
 
     /**

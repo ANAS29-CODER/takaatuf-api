@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/API/KnowledgeRequestController.php
 
 namespace App\Http\Controllers\API\KnowldgeRequester;
 
@@ -8,17 +7,17 @@ use App\Http\Requests\CreateKnowledgeRequest;
 use App\Http\Resources\KnowledgeRequestResource;
 use App\Models\KnowledgeRequest;
 use App\Services\KnowledgeRequestService;
+use App\Services\PaymentService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class KnowledgeRequestController extends Controller
 {
-    protected $service;
-
-    public function __construct(KnowledgeRequestService $service)
-    {
-        $this->service = $service;
-    }
+    public function __construct(
+        protected KnowledgeRequestService $service,
+        protected PaymentService $paymentService,
+    ) {}
 
     public function show($id)
 {
@@ -55,11 +54,7 @@ class KnowledgeRequestController extends Controller
     {
         $data = $request->validated();
 
-        /**
-         * 1️⃣ Validate media size (images 10MB, videos 100MB)
-         */
         if ($request->hasFile('media')) {
-
             $files = $request->file('media');
 
             if (!is_array($files)) {
@@ -67,7 +62,6 @@ class KnowledgeRequestController extends Controller
             }
 
             foreach ($files as $file) {
-
                 $mime = $file->getMimeType();
                 $sizeMB = $file->getSize() / (1024 * 1024);
 
@@ -85,61 +79,62 @@ class KnowledgeRequestController extends Controller
             }
         }
 
-        /**
-         * 2️⃣ Calculate budget
-         */
-        $total = $this->service->calculateBudget(
+        $totalBudget = $this->service->calculateBudget(
             $data['pay_per_kp'],
             $data['number_of_kps']
         );
 
-        /**
-         * 3️⃣ Create knowledge request
-         */
-        $requestModel = $this->service->createRequest([
-            'user_id'       => $request->user()->id,
-            'category'      => $data['category'],
-            'details'       => $data['details'],
-            'pay_per_kp'    => $data['pay_per_kp'],
-            'number_of_kps' => $data['number_of_kps'],
-            'review_fee'    => config('knowledge_request.review_fee', 2),
-            'total_budget'  => $total,
-            'neighborhood'  => $data['neighborhood'],
-            'status'        => KnowledgeRequest::STATUS_PENDING_MODERATION,
-            'progress'      => 0,
-            'due_date'      => $data['due_date'] ?? null,
-            'created_by'    => $request->user()->id,
-            'updated_by'    => $request->user()->id,
-        ]);
+        $result = DB::transaction(function () use ($request, $data, $totalBudget) {
+            $requestModel = $this->service->createRequest([
+                'user_id' => $request->user()->id,
+                'category' => $data['category'],
+                'details' => $data['details'],
+                'pay_per_kp' => $data['pay_per_kp'],
+                'number_of_kps' => $data['number_of_kps'],
+                'review_fee' => config('knowledge_request.review_fee', 2),
+                'total_budget' => $totalBudget,
+                'neighborhood' => $data['neighborhood'],
+                'status' => KnowledgeRequest::STATUS_PENDING_PAYMENT,
+                'progress' => 0,
+                'due_date' => $data['due_date'] ?? null,
+                'created_by' => $request->user()->id,
+                'updated_by' => $request->user()->id,
+            ]);
 
-        /**
-         * 4️⃣ Store media + get saved media
-         */
-        $media = collect();
+            if ($request->hasFile('media')) {
+                $this->service->storeMedia(
+                    $requestModel->id,
+                    $request->file('media')
+                );
+            }
 
-        if ($request->hasFile('media')) {
-            $media = $this->service->storeMedia(
-                $requestModel->id,
-                $request->file('media')
-            );
-        }
+            $fees = $this->paymentService->calculateFees($totalBudget);
+            $paypalOrder = $this->paymentService->createPayPalOrder($totalBudget, $requestModel->id);
 
-        /**
-         * 5️⃣ Return response with media
-         */
+            if (! $paypalOrder['success']) {
+                throw new \RuntimeException($paypalOrder['message'] ?? 'PayPal order creation failed.');
+            }
+
+            return [
+                'requestModel' => $requestModel,
+                'fees' => $fees,
+                'paypalOrder' => $paypalOrder,
+            ];
+        });
+
         return response()->json([
-            'message' => 'Request created. Proceed to payment.',
-            'data' => new KnowledgeRequestResource(
-                $requestModel->load('media')
-            ),
-            'payment_url' => route('payment.create', [
-                'request_id' => $requestModel->id
-            ]),
+            'message' => 'Request created. Complete payment to submit.',
+            'data' => new KnowledgeRequestResource($result['requestModel']->load('media')),
+            'payment' => [
+                'knowledge_request_id' => $result['requestModel']->id,
+                'paypal_order_id' => $result['paypalOrder']['paypal_order_id'],
+                'reference_id' => $result['paypalOrder']['reference_id'],
+                'fees' => $result['fees'],
+                'turnstile_site_key' => config('payment.turnstile.site_key'),
+                'paypal_client_id' => config('services.paypal.client_id'),
+            ],
         ], 201);
     }
-
-
-
 
     public function index()
     {
@@ -157,8 +152,8 @@ class KnowledgeRequestController extends Controller
                 'empty_state' => $isEmpty ? [
                     'title' => 'No requests yet',
                     'description' => 'You can create Survey, Essay, Photo, Video, or Errand requests.',
-                    'cta' => 'Create New Request'
-                ] : null
+                    'cta' => 'Create New Request',
+                ] : null,
             ], 200);
         } catch (\Throwable $e) {
             Log::error('Failed to load KR dashboard', [

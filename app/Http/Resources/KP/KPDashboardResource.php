@@ -39,14 +39,16 @@ class KPDashboardResource extends JsonResource
         }
 
         $sections['pending_requests'] = $this->formatPendingRequests();
+        $sections['submitted_requests'] = $this->formatSubmittedRequests();
+        $sections['rejected_requests'] = $this->formatRejectedRequests();
 
         // Completed requests always at bottom
         $sections['completed_requests'] = $this->formatCompletedRequests();
 
         // Add section order for frontend reference
         $sections['section_order'] = $hasActiveRequests
-            ? ['earnings_summary', 'active_requests', 'available_requests', 'completed_requests']
-            : ['earnings_summary', 'available_requests', 'active_requests', 'completed_requests'];
+            ? ['earnings_summary', 'active_requests', 'available_requests', 'pending_requests', 'submitted_requests', 'rejected_requests', 'completed_requests']
+            : ['earnings_summary', 'available_requests', 'active_requests', 'pending_requests', 'submitted_requests', 'rejected_requests', 'completed_requests'];
 
         return $sections;
     }
@@ -113,6 +115,43 @@ class KPDashboardResource extends JsonResource
             'count' => $items->count(),
             'items' => AvailableRequestResource::collection($items),
             'empty_message' => null,
+        ];
+    }
+
+    protected function formatSubmittedRequests(): array
+    {
+        $items = $this->resource['submitted_requests'];
+
+        if ($items->isEmpty()) {
+            return [
+                'count' => 0,
+                'items' => [],
+                'empty_message' => 'You have no submitted requests awaiting review.',
+            ];
+        }
+
+        return [
+            'count' => $items->count(),
+            'items' => SubmittedRequestResource::collection($items),
+            'empty_message' => null,
+        ];
+    }
+
+    protected function formatRejectedRequests(): array
+    {
+        $items = $this->resource['rejected_requests'];
+
+        if ($items->isEmpty()) {
+            return [
+                'count' => 0,
+                'items' => [],
+                'empty_message' => 'No rejected requests.',
+            ];
+        }
+
+        return [
+            'count' => $items->count(),
+            'items' => \App\Http\Resources\KP\RejectedRequestResource::collection($items),            'empty_message' => null,
         ];
     }
 

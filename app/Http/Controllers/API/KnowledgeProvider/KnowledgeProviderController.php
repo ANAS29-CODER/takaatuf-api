@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\API\KnowledgeProvider;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\KP\KPDashboardResource;
 use App\Http\Resources\KP\ActiveRequestResource;
 use App\Http\Resources\KP\AvailableRequestResource;
 use App\Http\Resources\KP\CompletedRequestResource;
+use App\Http\Resources\KP\KPDashboardResource;
 use App\Models\KnowledgeRequest;
 use App\Repositories\KnowledgeProviderRepository;
 use App\Services\KnowledgeProviderDashboardService;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Exception;
 
 class KnowledgeProviderController extends Controller
 {
@@ -30,8 +30,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get the Knowledge Provider dashboard
-     *
-     * @return JsonResponse
      */
     public function dashboard(): JsonResponse
     {
@@ -56,8 +54,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get only earnings summary
-     *
-     * @return JsonResponse
      */
     public function earningsSummary(): JsonResponse
     {
@@ -85,8 +81,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get only active requests
-     *
-     * @return JsonResponse
      */
     public function activeRequests(): JsonResponse
     {
@@ -123,8 +117,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get only available requests
-     *
-     * @return JsonResponse
      */
     public function availableRequests(): JsonResponse
     {
@@ -161,8 +153,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get only completed requests
-     *
-     * @return JsonResponse
      */
     public function completedRequests(): JsonResponse
     {
@@ -199,10 +189,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Apply to a knowledge request
-     *
-     * @param Request $request
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function applyToRequest(Request $request, int $requestId): JsonResponse
     {
@@ -224,7 +210,6 @@ class KnowledgeProviderController extends Controller
                     'message' => 'This request is no longer available.',
                 ], 400);
             }
-            
 
             if ($this->kpRepo->isAssignedToRequest($user->id, $requestId)) {
                 return response()->json([
@@ -257,10 +242,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Update progress on an assigned request
-     *
-     * @param Request $request
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function updateProgress(Request $request, int $requestId): JsonResponse
     {
@@ -304,9 +285,6 @@ class KnowledgeProviderController extends Controller
 
     /**
      * Get details of a specific request
-     *
-     * @param int $requestId
-     * @return JsonResponse
      */
     public function showRequest(int $requestId): JsonResponse
     {
@@ -336,7 +314,7 @@ class KnowledgeProviderController extends Controller
                     return [
                         'id' => $m->id,
                         'type' => $m->type,
-                        'url' => asset('storage/' . $m->file_path),
+                        'url' => asset('storage/'.$m->file_path),
                     ];
                 }),
                 'created_at' => $knowledgeRequest->created_at->toDateTimeString(),

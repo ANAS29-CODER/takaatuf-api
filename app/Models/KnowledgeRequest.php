@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class KnowledgeRequest extends Model
 {
     use HasFactory;
+    const STATUS_PENDING_PAYMENT = 'pending_payment';
 
     // Moderation statuses
     const STATUS_PENDING_MODERATION = 'pending_moderation';
@@ -19,9 +20,10 @@ class KnowledgeRequest extends Model
     const STATUS_ACTIVE = 'active';
     const STATUS_COMPLETED = 'completed';
 
-    public static function getStatuses()
+    public static function getStatuses(): array
     {
         return [
+            self::STATUS_PENDING_PAYMENT,
             self::STATUS_PENDING_MODERATION,
             self::STATUS_APPROVED,
             self::STATUS_AVAILABLE,
@@ -31,7 +33,7 @@ class KnowledgeRequest extends Model
         ];
     }
 
-    public static function getModerationStatuses()
+    public static function getModerationStatuses(): array
     {
         return [
             self::STATUS_PENDING_MODERATION,
@@ -92,7 +94,7 @@ class KnowledgeRequest extends Model
         'review_fee' => 'decimal:2',
     ];
 
-     public function media()
+    public function media()
     {
         return $this->hasMany(KnowledgeRequestMedia::class);
     }
@@ -135,6 +137,12 @@ class KnowledgeRequest extends Model
         return max(0, $this->number_of_kps - $assignedCount);
     }
 
+    public function activeKps()
+    {
+        return $this->users()
+            ->wherePivotIn('status', UserKnowledgeRequest::getActiveStatuses());
+    }
+
     /**
      * Get all work submissions for this request
      */
@@ -165,6 +173,16 @@ class KnowledgeRequest extends Model
     public function budgetHistories()
     {
         return $this->hasMany(BudgetHistory::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function isPendingPayment(): bool
+    {
+        return $this->status === self::STATUS_PENDING_PAYMENT;
     }
 
     /**
