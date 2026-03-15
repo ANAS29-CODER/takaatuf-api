@@ -22,77 +22,80 @@ class ProfileService
     {
         return $this->userRepo->update($userId, $data);
     }
-    public function getGeolocation($ip)
-    {
-        try {
-            $reader = new Reader(storage_path('app/geoip/GeoLite2-City.mmdb'));
-            $ip = '127.0.0.1';  // مثال على IP داخل غزة
-            // $ip= '185.34.86.15';
-            //    $ip = '127.0.0.1';
-            $record = $reader->city($ip);
+   private function getUserIp(): string
+{
+    return request()->header('CF-Connecting-IP')
+        ?? request()->header('X-Forwarded-For')
+        ?? request()->ip();
+}
 
-            return [
-                'category' => 'Match',
-                'country' => $record->country->name,
-                'region' => $record->mostSpecificSubdivision->name ?? 'Unknown',
-                'city' => $record->city->name ?? 'Unknown',
-            ];
-        } catch (\Exception $e) {
-            Log::error('GeoIP Error: ' . $e->getMessage(), ['ip' => $ip]);
+public function getGeolocation(): ?array
+{
+    try {
+        $ip = $this->getUserIp();
 
-            return [
-                'category' => 'Unknown',
-                'message' => 'There was an error retrieving the location based on the IP address. Please check if the IP is valid or try again.'
-            ];
-        }
+        $reader = new \GeoIp2\Database\Reader(
+            storage_path('app/geoip/GeoLite2-City.mmdb')
+        );
+        $record = $reader->city($ip);
+
+        return [
+            'country' => $record->country->name ?? null,
+            'region'  => $record->mostSpecificSubdivision->name ?? null,
+            'city'    => $record->city->name ?? null,
+        ];
+
+    } catch (\Exception $e) {
+        Log::error('GeoIP Error: '.$e->getMessage());
+        return null;
     }
-
+}
     /**
      *compare IP-derived region with the city
      */
-
-public function checkLocationMatch(string $userInputCity, string $ip)
+public function checkLocationMatch(string $userInputCity, string $ip): array
 {
-    $geoData = $this->getGeolocation($ip);
+    $geo = $this->getGeolocation($ip);
 
-    $country = $geoData['country'] ?? null;
-    $region = $geoData['region'] ?? null;
-    $city = $geoData['city'] ?? null;
+    $country = $geo['country'] ?? null;
+    $region  = $geo['region'] ?? null;
+    $city    = $geo['city'] ?? null;
 
     $location = [
         'country' => $country,
-        'region' => $region,
-        'city' => $city
+        'region'  => $region,
+        'city'    => $city
     ];
 
-    if ($city && strtolower($userInputCity) === strtolower($city)) {
-        $category = 'Match';
-        $role = ($userInputCity === 'Gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
-    } elseif ($city && strtolower($userInputCity) !== strtolower($city)) {
-        $category = 'Mismatch';
-        $role = null;
-    } else {
-        $category = 'Unknown';
-        $role = null;
+    // لو الـIP لم يعطينا مدينة أو منطقة
+    if (!$city && !$region) {
+        return [
+            'category' => 'Unknown',
+            'role'     => null,
+            'location' => $location
+        ];
     }
 
+    // تحويل كل النصوص إلى lowercase بدون فراغات زائدة
+    $userCityNormalized = strtolower(trim($userInputCity));
+    $ipCityNormalized   = strtolower(trim($city ?? ''));
+    $ipRegionNormalized = strtolower(trim($region ?? ''));
+
+    $ipString = $ipCityNormalized . ' ' . $ipRegionNormalized;
+
+    if (str_contains($ipString, $userCityNormalized) || str_contains($userCityNormalized, $ipString)) {
+        $category = 'Match';
+        $role = str_contains($ipString, 'gaza') ? 'Knowledge Provider' : 'Knowledge Requester';
+    } else {
+        $category = 'Mismatch';
+        $role = null;
+    }
     return [
         'category' => $category,
-        'role' => $role,
+        'role'     => $role,
         'location' => $location
     ];
 }
-
-    // public function storeAuditLog($userId, $category, $location, $userConfirmation = null)
-    // {
-    //     AuditLog::create([
-    //         'user_id' => $userId,
-    //         'location_category' => $category,
-    //         'location' => json_encode($location),
-    //         'user_confirmation' => $userConfirmation,
-    //         'created_at' => now(),
-    //     ]);
-    // }
 
   public function storeAuditLog(
     int $userId,
@@ -115,8 +118,6 @@ public function checkLocationMatch(string $userInputCity, string $ip)
         'updated_at' => now(),
     ]);
 }
-
-
 
     public function validateWalletAddress(string $type, string $address): array
     {
