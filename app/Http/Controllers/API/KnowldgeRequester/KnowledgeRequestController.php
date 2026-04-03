@@ -136,6 +136,28 @@ class KnowledgeRequestController extends Controller
         ], 201);
     }
 
+    public function pendingApproval(): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            $pendingRequests = $this->service->getPendingApprovalRequests($user);
+
+            return response()->json([
+                'data' => KnowledgeRequestResource::collection($pendingRequests),
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('Failed to load KR pending approval requests', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to load pending requests. Please try again.',
+            ], 500);
+        }
+    }
+
     public function index()
     {
         try {
@@ -143,10 +165,12 @@ class KnowledgeRequestController extends Controller
 
             $activeRequests = $this->service->getActiveRequests($user);
             $completedRequests = $this->service->getCompletedRequests($user);
+            $pendingRequests=$this->service->getPendingApprovalRequests($user);
 
             $isEmpty = $activeRequests->isEmpty() && $completedRequests->isEmpty();
 
             return response()->json([
+                'pendingRequests' => KnowledgeRequestResource::collection($pendingRequests),
                 'active_requests' => KnowledgeRequestResource::collection($activeRequests),
                 'completed_requests' => KnowledgeRequestResource::collection($completedRequests),
                 'empty_state' => $isEmpty ? [

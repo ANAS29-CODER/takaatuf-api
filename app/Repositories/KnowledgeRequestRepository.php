@@ -42,6 +42,11 @@ public function getActiveRequests($user)
         ->get();
 }
 
-
+    public function getPendingApprovalRequests($user)
+    {
+        return KnowledgeRequest::where('user_id', $user->id)
+            ->where('status', KnowledgeRequest::STATUS_PENDING_MODERATION)
+            ->latest()
+            ->get();
+    }
 }
-

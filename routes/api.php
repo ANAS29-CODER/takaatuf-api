@@ -114,6 +114,7 @@ Route::group([
         Route::prefix('dashboard/kr')->group(function () {
             Route::get('/', [KnowledgeRequestController::class, 'index']);
             Route::post('/submit-request ', [KnowledgeRequestController::class, 'store']);
+            Route::get('/pending-approval', [KnowledgeRequestController::class, 'pendingApproval']);
         });
 
         // Payment Routes for Knowledge Requester
