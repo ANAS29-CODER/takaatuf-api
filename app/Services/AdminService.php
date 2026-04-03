@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\BudgetHistory;
 use App\Models\KnowledgeRequest;
 use App\Models\Payout;
 use App\Models\User;
@@ -77,14 +76,13 @@ class AdminService
     {
         $request = $this->adminRepo->getRequestById($requestId);
 
-        $location= $request->neighborhood;
+        $location = is_array($request->neighborhood) ? implode(', ', $request->neighborhood) : $request->neighborhood;
 
-
-        if (!$request) {
+        if (! $request) {
             return ['success' => false, 'message' => 'Request not found.'];
         }
 
-        if (!$request->isPendingModeration()) {
+        if (! $request->isPendingModeration()) {
             return ['success' => false, 'message' => 'Request is not pending moderation.'];
         }
 
@@ -95,14 +93,15 @@ class AdminService
             $request = $this->adminRepo->updateRequestStatus($requestId, KnowledgeRequest::STATUS_APPROVED, $admin->id);
             $newValues = ['status' => $request->status];
 
-            $this->auditLogService->logRequestApproval($requestId, $oldValues, $newValues, $httpRequest,$location);
+            $this->auditLogService->logRequestApproval($requestId, $oldValues, $newValues, $httpRequest, $location);
 
             DB::commit();
 
             return ['success' => true, 'message' => 'Request approved successfully.', 'request' => $request];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to approve request: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to approve request: '.$e->getMessage()];
         }
     }
 
@@ -113,11 +112,11 @@ class AdminService
     {
         $request = $this->adminRepo->getRequestById($requestId);
 
-        if (!$request) {
+        if (! $request) {
             return ['success' => false, 'message' => 'Request not found.'];
         }
 
-        if (!$request->isPendingModeration()) {
+        if (! $request->isPendingModeration()) {
             return ['success' => false, 'message' => 'Request is not pending moderation.'];
         }
 
@@ -135,7 +134,8 @@ class AdminService
             return ['success' => true, 'message' => 'Request rejected successfully.', 'request' => $request];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to reject request: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to reject request: '.$e->getMessage()];
         }
     }
 
@@ -162,12 +162,12 @@ class AdminService
     {
         $request = $this->adminRepo->getRequestById($requestId);
 
-        if (!$request) {
+        if (! $request) {
             return ['success' => false, 'message' => 'Request not found.'];
         }
 
         // Check if request is available or active
-        if (!in_array($request->status, [KnowledgeRequest::STATUS_AVAILABLE, KnowledgeRequest::STATUS_ACTIVE])) {
+        if (! in_array($request->status, [KnowledgeRequest::STATUS_AVAILABLE, KnowledgeRequest::STATUS_ACTIVE])) {
             return ['success' => false, 'message' => 'Request is not available for KP assignment.'];
         }
 
@@ -203,7 +203,8 @@ class AdminService
             return ['success' => true, 'message' => 'KP application approved successfully.', 'assignment' => $assignment];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to approve KP application: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to approve KP application: '.$e->getMessage()];
         }
     }
 
@@ -226,7 +227,8 @@ class AdminService
             return ['success' => true, 'message' => 'KP application rejected.', 'assignment' => $assignment];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to reject KP application: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to reject KP application: '.$e->getMessage()];
         }
     }
 
@@ -261,11 +263,11 @@ class AdminService
     {
         $payout = $this->adminRepo->getPayoutById($payoutId);
 
-        if (!$payout) {
+        if (! $payout) {
             return ['success' => false, 'message' => 'Payout not found.'];
         }
 
-        if (!$payout->canBeProcessed()) {
+        if (! $payout->canBeProcessed()) {
             return ['success' => false, 'message' => 'Payout cannot be processed in its current state.'];
         }
 
@@ -291,7 +293,8 @@ class AdminService
             return ['success' => true, 'message' => 'Payout completed successfully.', 'payout' => $payout];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to complete payout: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to complete payout: '.$e->getMessage()];
         }
     }
 
@@ -302,11 +305,11 @@ class AdminService
     {
         $payout = $this->adminRepo->getPayoutById($payoutId);
 
-        if (!$payout) {
+        if (! $payout) {
             return ['success' => false, 'message' => 'Payout not found.'];
         }
 
-        if (!$payout->canBeProcessed()) {
+        if (! $payout->canBeProcessed()) {
             return ['success' => false, 'message' => 'Payout cannot be cancelled in its current state.'];
         }
 
@@ -324,7 +327,8 @@ class AdminService
             return ['success' => true, 'message' => 'Payout cancelled/failed.', 'payout' => $payout];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to cancel payout: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to cancel payout: '.$e->getMessage()];
         }
     }
 
@@ -335,7 +339,7 @@ class AdminService
     {
         $request = $this->adminRepo->getRequestById($requestId);
 
-        if (!$request) {
+        if (! $request) {
             return ['success' => false, 'message' => 'Request not found.'];
         }
 
@@ -365,7 +369,8 @@ class AdminService
             return ['success' => true, 'message' => 'Budget updated successfully.', 'history' => $history];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to update budget: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to update budget: '.$e->getMessage()];
         }
     }
 
@@ -408,7 +413,7 @@ class AdminService
     {
         $submission = $this->adminRepo->getSubmissionById($submissionId);
 
-        if (!$submission) {
+        if (! $submission) {
             return ['success' => false, 'message' => 'Submission not found.'];
         }
 
@@ -427,8 +432,9 @@ class AdminService
                 $submission->user_id
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 DB::rollBack();
+
                 return $result;
             }
 
@@ -441,7 +447,8 @@ class AdminService
             return ['success' => true, 'message' => 'Submission approved successfully.', 'submission' => $result['submission']];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to approve submission: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to approve submission: '.$e->getMessage()];
         }
     }
 
@@ -452,7 +459,7 @@ class AdminService
     {
         $submission = $this->adminRepo->getSubmissionById($submissionId);
 
-        if (!$submission) {
+        if (! $submission) {
             return ['success' => false, 'message' => 'Submission not found.'];
         }
 
@@ -472,8 +479,9 @@ class AdminService
                 $reason
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 DB::rollBack();
+
                 return $result;
             }
 
@@ -486,7 +494,8 @@ class AdminService
             return ['success' => true, 'message' => 'Submission rejected.', 'submission' => $result['submission']];
         } catch (\Exception $e) {
             DB::rollBack();
-            return ['success' => false, 'message' => 'Failed to reject submission: ' . $e->getMessage()];
+
+            return ['success' => false, 'message' => 'Failed to reject submission: '.$e->getMessage()];
         }
     }
 }

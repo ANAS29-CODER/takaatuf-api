@@ -92,6 +92,7 @@ class KnowledgeRequest extends Model
         'pay_per_kp' => 'decimal:2',
         'total_budget' => 'decimal:2',
         'review_fee' => 'decimal:2',
+        'neighborhood' => 'array',
     ];
 
     public function media()

@@ -2,9 +2,8 @@
 
 namespace App\Http\Requests;
 
-
-use Illuminate\Foundation\Http\FormRequest;
 use App\Rules\MediaSizeRule;
+use Illuminate\Foundation\Http\FormRequest;
 
 class CreateKnowledgeRequest extends FormRequest
 {
@@ -39,18 +38,15 @@ class CreateKnowledgeRequest extends FormRequest
             'number_of_kps' => 'required|integer|min:1',
 
             // Neighborhood
-             'neighborhood' => 'required|in:All locations,Gaza City,Rimal,Shujaiya,Tal Al-Hawa,Sheikh Radwan,Al-Nasr,Al Darraj,Al-Tuffah,Al-Sabra,Al-Shati,Al-Moghrarah,Deir Al-Balah,Al-Nusairat,Al-Bureij,Al-Maghazi,Khan Younis,Rafah',
-
+            'neighborhood' => 'required|array|min:1',
+            'neighborhood.*' => 'required|in:All locations,Gaza City,Rimal,Shujaiya,Tal Al-Hawa,Sheikh Radwan,Al-Nasr,Al Darraj,Al-Tuffah,Al-Sabra,Al-Shati,Al-Moghrarah,Deir Al-Balah,Al-Nusairat,Al-Bureij,Al-Maghazi,Khan Younis,Rafah',
 
             // Media (optional)
 
-        'media.*' => ['nullable', 'file', 'mimes:jpeg,jpg,png,gif,bmp,mp4,mov,avi,wmv,mkv', new MediaSizeRule()],
-       ];
+            'media.*' => ['nullable', 'file', 'mimes:jpeg,jpg,png,gif,bmp,mp4,mov,avi,wmv,mkv', new MediaSizeRule],
+        ];
     }
-
-
-
-       public function messages(): array
+    public function messages(): array
     {
         return [
             'category.required' => 'Category is required.',
@@ -61,7 +57,10 @@ class CreateKnowledgeRequest extends FormRequest
             'number_of_kps.required' => 'Number of KPs is required.',
             'number_of_kps.integer' => 'Number of KPs must be an integer.',
             'neighborhood.required' => 'Neighborhood is required.',
-             'media.*.mimes' => 'Each media file must be an image or video (jpeg, png, gif, mp4, mov, avi, wmv, mkv).',
+            'neighborhood.array' => 'Neighborhood must be a list of values.',
+            'neighborhood.min' => 'At least one neighborhood must be selected.',
+            'neighborhood.*.in' => 'One or more selected neighborhoods are invalid.',
+            'media.*.mimes' => 'Each media file must be an image or video (jpeg, png, gif, mp4, mov, avi, wmv, mkv).',
         ];
     }
 
