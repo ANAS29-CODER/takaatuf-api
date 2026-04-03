@@ -23,7 +23,7 @@ class KnowledgeRequestResource extends JsonResource
         'total_budget'  => $this->total_budget,
         'neighborhood'  => $this->neighborhood,
         'status'        => $this->status,
-        'progress'      => $this->status === 'completed' ? 100 : $this->progress,
+        'progress'      => $this->status === 'completed' ? 100 : ($this->progress ?? 0),
         'media' => $this->whenLoaded('media', function () {
             return $this->media->map(function ($m) {
                 return [
@@ -33,7 +33,16 @@ class KnowledgeRequestResource extends JsonResource
                 ];
             });
         }),
-
+        'kp_progress' => $this->whenLoaded('knowledgeProviders', function () {
+            return $this->knowledgeProviders->map(function ($kp) {
+                return [
+                    'kp_id'    => $kp->id,
+                    'name'     => $kp->full_name,
+                    'progress' => $kp->pivot->progress ?? 0,
+                    'status'   => $kp->pivot->status,
+                ];
+            });
+        }),
         'created_at' => $this->created_at->toDateTimeString(),
     ];
 }

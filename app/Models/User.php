@@ -15,7 +15,6 @@ class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
-
     const KNOWLEDGE_PROVIDER = 'Knowledge Provider';
     const KNOWLEDGE_REQUESTER = 'Knowledge Requester';
     const ADMIN = 'Admin';
@@ -30,11 +29,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'oauth_provider',
+        'email_verification_token',
+        'email_verified_at',
         'oauth_provider_id',
         'profile_completed',
         'city_neighborhood',
-        'paypal_account',
         'role',
+        'avatar',
     ];
 
     /**
@@ -67,7 +68,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(\App\Models\SocialAccount::class);
     }
 
-        public function auditLogs()
+    public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
     }
@@ -91,14 +92,50 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(Wallet::class)->where('is_primary', true);
     }
+    /**
+     * Get all knowledge requests assigned to this KP
+     */
     public function knowledgeRequests()
-{
-    return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request');
-}
+    {
+        return $this->belongsToMany(KnowledgeRequest::class, 'user_knowledge_request')
+            ->using(UserKnowledgeRequest::class)
+            ->withPivot(['status', 'progress', 'payout_amount', 'completed_at'])
+            ->withTimestamps();
+    }
 
+    /**
+     * Get active knowledge requests for this KP
+     */
+    public function activeKnowledgeRequests()
+    {
+        return $this->knowledgeRequests()
+            ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getActiveStatuses());
+    }
+
+    /**
+     * Get completed knowledge requests for this KP
+     */
+    public function completedKnowledgeRequests()
+    {
+        return $this->knowledgeRequests()
+            ->whereIn('user_knowledge_request.status', UserKnowledgeRequest::getCompletedStatuses());
+    }
 
     public function paypalAccount()
     {
         return $this->hasOne(PaypalAccount::class);
+    }
+
+    /**
+     * Get all work submissions for this KP
+     */
+    public function workSubmissions()
+    {
+        return $this->hasMany(WorkSubmission::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 }

@@ -15,23 +15,23 @@ class CheckUserRole
      */
     public function handle(Request $request, Closure $next, string $role_type): Response
     {
-        //make the $role small letter
-
         $role = strtolower($role_type);
 
-        if ($role === 'kp') {
-            $role = 'Knowledge Provider';
-        }
-        if ($role === 'kr') {
-            $role = 'Knowledge Requester';
-        }
+        // Map shorthand role names to full role names
+        $roleMap = [
+            'kp' => 'Knowledge Provider',
+            'kr' => 'Knowledge Requester',
+            'admin' => 'Admin',
+        ];
+
+        $role = $roleMap[$role] ?? $role;
 
         $user = auth()->user();
 
         abort_if(
             $user->role !== $role,
             403,
-            'Unauthorized. Insufficient permissions.'
+            'Unauthorized: This action requires the ' . $role . ' role.'
         );
 
         return $next($request);

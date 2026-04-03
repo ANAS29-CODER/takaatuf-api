@@ -74,4 +74,16 @@ class UserFactory extends Factory
             'city_neighborhood' => fake()->city(),
         ]);
     }
+
+    /**
+     * Create an Admin user.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'Admin',
+            'profile_completed' => true,
+            'city_neighborhood' => fake()->city(),
+        ]);
+    }
 }
